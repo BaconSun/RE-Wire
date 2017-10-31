@@ -1,0 +1,3 @@
+/home/bacon/Desktop/WireArt/R3DC_linux/build/CMakeFiles/rebuild_cache.dir
+/home/bacon/Desktop/WireArt/R3DC_linux/build/CMakeFiles/edit_cache.dir
+/home/bacon/Desktop/WireArt/R3DC_linux/build/CMakeFiles/reconstruct_3D_curves_node.dir

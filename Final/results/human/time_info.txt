@@ -1,0 +1,5 @@
+reconstruction time:	 18.540692 sec
+preprocessing time:	 0.356506 sec
+filtering curves time:	 2.138529 sec
+running TSP time:	 0.775516 sec
+spline fitting time:	 21.993982 sec

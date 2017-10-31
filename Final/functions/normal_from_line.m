@@ -1,0 +1,146 @@
+function [ normals, curvature ] = normal_from_line(points, numNeighbours, viewPoint, dirLargest)
+%
+%  This function has been fixed to compute the gradient for 2D points.
+%
+%
+%FINDPOINTNORMALS Estimates the normals of a sparse set of n 3d points by
+% using a set of the closest neighbours to approximate a plane.
+%
+%   Required Inputs:
+%   points- nx3 set of 3d points (x,y,z)
+%
+%   Optional Inputs: (will give default values on empty array [])
+%   numNeighbours- number of neighbouring points to use in plane fitting
+%       (default 9)
+%   viewPoint- location all normals will point towards (default [0,0,0])
+%   dirLargest- use only the largest component of the normal in determining
+%       its direction wrt the viewPoint (generally provides a more stable
+%       estimation of planes near the viewPoint, default true)
+%
+%   Outputs:
+%   normals- nx3 set of normals (nx,ny,nz)
+%   curvature- nx1 set giving the curvature
+%
+%   References-
+%   The implementation closely follows the method given at
+%   http://pointclouds.org/documentation/tutorials/normal_estimation.php
+%   This code was used in generating the results for the journal paper
+%   Multi-modal sensor calibration using a gradient orientation measure 
+%   http://www.zjtaylor.com/welcome/download_pdf?pdf=JFR2013.pdf
+%
+%   This code was written by Zachary Taylor
+%   zacharyjeremytaylor@gmail.com
+%   http://www.zjtaylor.com
+
+%% check inputs
+validateattributes(points, {'numeric'},{'ncols',2});
+
+if(nargin < 2)
+    numNeighbours = [];
+end
+if(isempty(numNeighbours))
+    numNeighbours = 9;
+else
+    validateattributes(numNeighbours, {'numeric'},{'scalar','positive'});
+    if(numNeighbours > 100)
+        warning(['%i neighbouring points will be used in plane'...
+            ' estimation, expect long run times, large ram usage and'...
+            ' poor results near edges'],numNeighbours);
+    end
+end
+
+if(nargin < 3)
+    viewPoint = [];
+end
+if(isempty(viewPoint))
+    viewPoint = [0,0];
+else
+    validateattributes(viewPoint, {'numeric'},{'size',[1,2]});
+end
+
+if(nargin < 4)
+    dirLargest = [];
+end
+if(isempty(dirLargest))
+    dirLargest = true;
+else
+    validateattributes(dirLargest, {'logical'},{'scalar'});
+end
+
+%% setup
+
+%ensure inputs of correct type
+points    = double(points);
+viewPoint = double(viewPoint);
+
+nums      = size(points, 1)
+if numNeighbours > nums
+    numNeighbours = nums;
+end
+
+a     = 1 : numNeighbours;
+b     = a - numNeighbours - 1;
+A     = repmat(a, nums, 1) + repmat((1 : nums)', 1, numNeighbours);
+B     = repmat(b, nums, 1) + repmat((1 : nums)', 1, numNeighbours);
+left  = B .* (B > 0);     lmask = (left  > 0);
+right = A .* (A <= nums); rmask = (right > 0);
+
+% option-1
+nidx  = [left right];
+nmask = [lmask rmask];
+
+% p = repmat(points(:,1:2), 2 * numNeighbours,1) - points(nidx(:) + 1 - nmask(:), 1:2);
+% npoints = points(nidx + 1 - nmask, 1:2);
+% npoints = reshape(npoints, nums, 2 * numNeighbours, 2) .* repmat(nmask, 1, 1, 2);
+% size(sum(npoints, 2))
+% size(repmat(sum(nmask, 2), 1, 2))
+% cpoints = repmat(sum(npoints, 2) ./ repmat(sum(nmask, 2), 1, 1, 2), 1, 2 * numNeighbours, 1);
+% p  = cpoints - npoints;
+p = repmat(points(:,1:2), 2 * numNeighbours,1) - points(nidx(:) + 1 - nmask(:), 1:2);
+p = reshape(p, nums, 2 * numNeighbours, 2);
+
+
+%calculate values for covariance matrix
+C = zeros(size(points,1),3);
+C(:,1) = sum(p(:,:,1).*p(:,:,1) .* nmask ,2);
+C(:,2) = sum(p(:,:,1).*p(:,:,2) .* nmask ,2);
+C(:,3) = sum(p(:,:,2).*p(:,:,2) .* nmask ,2);
+C = C ./ repmat(sum(nmask, 2), 1, 3);
+
+%% normals and curvature calculation
+
+normals   = zeros(size(points));
+curvature = zeros(size(points,1),1);
+for i = 1:(size(points,1))
+    
+    %form covariance matrix
+    Cmat = [C(i,1) C(i,2);...
+            C(i,2) C(i,3)];  
+    
+    %get eigen values and vectors
+    [v,d] = eig(Cmat);
+    d = diag(d);
+    [lambda,k] = min(d);
+    
+    %store normals
+    normals(i,:) = v(:,k)';
+    
+    %store curvature
+    curvature(i) = lambda / sum(d);
+end
+
+%% flipping normals
+
+%ensure normals point towards viewPoint
+points = points - repmat(viewPoint,size(points,1),1);
+if(dirLargest)
+    [~,idx] = max(abs(normals),[],2);
+    idx = (1:size(normals,1))' + (idx-1)*size(normals,1);
+    dir = normals(idx).*points(idx) > 0;
+else
+    dir = sum(normals.*points,2) > 0;
+end
+
+normals(dir,:) = -normals(dir,:);
+
+end
