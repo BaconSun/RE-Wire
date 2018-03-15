@@ -1,0 +1,8 @@
+prefix=/home/bacon/catkin_ws/src/rewire/cmake-build-debug/devel
+
+Name: rewire
+Description: Description of rewire
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/bacon/catkin_ws/src/rewire/cmake-build-debug/devel/lib 
+Requires: 

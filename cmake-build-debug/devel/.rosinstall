@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/bacon/catkin_ws/src/rewire/cmake-build-debug/devel/setup.sh
