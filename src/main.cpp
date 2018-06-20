@@ -19,7 +19,7 @@ using namespace Eigen;
 
 int main (int argc, char* argv[])
 {
-    string workspace = "/home/bacon/Desktop/WireArt/Models/test_back/";
+    string workspace = "/home/bacon/catkin_ws/src/rewire/data/Curve/";
 
     const int camera_num = 4;
 
@@ -146,36 +146,36 @@ int main (int argc, char* argv[])
 //    imshow("neigh", combine[1]);
 //    waitKey(0);
 
-    int mature_segment = 0;
-    for (int idx = 0; idx < recon->candidates.size(); idx++)
-    {
-        if (recon->candidates[idx].curve.size() > 5)
-            mature_segment ++;
-        cout << endl << "Curve candidate Num: " << idx+1 << endl;
-        Mat combine[2];
-        for (int i = 0; i < 2; i++)
-        {
-            combine[i] = recon->view[i]->computed_image.clone();
-            cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
-            for (int j = 0; j < recon->candidates[idx].segment[i].size(); j++)
-            {
-//            cout << "Point " << j+1 << " : " << recon->candidates[i].curve[j] << endl;
-                Vector3d temp = recon->candidates[idx].segment[i][j];
-                temp = temp / temp[2];
-                if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
-                {
-                    cout << temp << endl << endl;
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
-                }
-            }
-        }
-        imshow("main", combine[0]);
-        imshow("neigh", combine[1]);
-        waitKey(0);
-    }
-    cout << "No. of segments with enough candidates: " << mature_segment << endl;
+//    int mature_segment = 0;
+//    for (int idx = 0; idx < recon->candidates.size(); idx++)
+//    {
+//        if (recon->candidates[idx].curve.size() > 5)
+//            mature_segment ++;
+//        cout << endl << "Curve candidate Num: " << idx+1 << endl;
+//        Mat combine[2];
+//        for (int i = 0; i < 2; i++)
+//        {
+//            combine[i] = recon->view[i]->computed_image.clone();
+//            cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+//            for (int j = 0; j < recon->candidates[idx].segment[i].size(); j++)
+//            {
+////            cout << "Point " << j+1 << " : " << recon->candidates[i].curve[j] << endl;
+//                Vector3d temp = recon->candidates[idx].segment[i][j];
+//                temp = temp / temp[2];
+//                if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
+//                {
+//                    cout << temp << endl << endl;
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+//                }
+//            }
+//        }
+//        imshow("main", combine[0]);
+//        imshow("neigh", combine[1]);
+//        waitKey(0);
+//    }
+//    cout << "No. of segments with enough candidates: " << mature_segment << endl;
 
 //    for (auto &i: recon->candidates)
 //    {
@@ -214,11 +214,11 @@ int main (int argc, char* argv[])
 //
 
 //    Mat combine[2];
-    for (int i = 0; i < 2; i++)
+    for (auto &j: recon->candidates)
     {
-        combine[i] = recon->view[i]->skeleton.clone();
-
-        cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+//        combine[i] = recon->view[i]->skeleton.clone();
+//
+//        cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
 //        Vector3d temp_center = recon->view[i]->P * center;
 //        temp_center = temp_center / temp_center[2];
 //
@@ -227,8 +227,11 @@ int main (int argc, char* argv[])
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[0] = 255;
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[1] = 0;
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[2] = 255;
-        for (auto &j: recon->candidates)
+        for (int i = 0; i < 2; i++)
         {
+            combine[i] = recon->view[i]->skeleton.clone();
+            cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+
             for (auto &p: j.curve)
             {
                 Vector3d temp = recon->view[i]->P * p;
@@ -244,7 +247,11 @@ int main (int argc, char* argv[])
                     cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
                 }
             }
+
         }
+        imshow("main", combine[0]);
+        imshow("neigh", combine[1]);
+        waitKey(0);
     }
 
 
@@ -274,11 +281,11 @@ int main (int argc, char* argv[])
 //        }
 //    }
 
-    imshow("main", combine[0]);
-    imshow("neigh", combine[1]);
-//    imshow("ImageL", recon->view[1]->skeleton);
-//    imshow("ImageR", recon->view[0]->skeleton);
-    waitKey(0);
+//    imshow("main", combine[0]);
+//    imshow("neigh", combine[1]);
+////    imshow("ImageL", recon->view[1]->skeleton);
+////    imshow("ImageR", recon->view[0]->skeleton);
+//    waitKey(0);
 
     return 0;
 }
