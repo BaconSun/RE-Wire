@@ -3,9 +3,8 @@
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
       <config projectName="rewire" targetName="roscpp_generate_messages_nodejs" />
-      <config projectName="rewire" targetName="gtest" />
       <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_eus" />
-      <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_lisp" />
+      <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_py" />
       <config projectName="rewire" targetName="download_extra_data" />
       <config projectName="rewire" targetName="sensor_msgs_generate_messages_py" />
       <config projectName="rewire" targetName="roscpp_generate_messages_lisp" />
@@ -13,11 +12,11 @@
       <config projectName="rewire" targetName="geometry_msgs_generate_messages_py" />
       <config projectName="rewire" targetName="geometry_msgs_generate_messages_cpp" />
       <config projectName="rewire" targetName="sensor_msgs_generate_messages_cpp" />
+      <config projectName="rewire" targetName="run_tests" />
       <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_nodejs" />
       <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_cpp" />
       <config projectName="rewire" targetName="rewire_node" />
       <config projectName="rewire" targetName="geometry_msgs_generate_messages_lisp" />
-      <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_py" />
       <config projectName="rewire" targetName="std_msgs_generate_messages_cpp" />
       <config projectName="rewire" targetName="roscpp_generate_messages_eus" />
       <config projectName="rewire" targetName="std_msgs_generate_messages_lisp" />
@@ -28,13 +27,14 @@
       <config projectName="rewire" targetName="roscpp_generate_messages_py" />
       <config projectName="rewire" targetName="sensor_msgs_generate_messages_lisp" />
       <config projectName="rewire" targetName="doxygen" />
-      <config projectName="rewire" targetName="tests" />
+      <config projectName="rewire" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="rewire" targetName="rosgraph_msgs_generate_messages_lisp" />
       <config projectName="rewire" targetName="std_msgs_generate_messages_py" />
       <config projectName="rewire" targetName="geometry_msgs_generate_messages_nodejs" />
       <config projectName="rewire" targetName="geometry_msgs_generate_messages_eus" />
-      <config projectName="rewire" targetName="run_tests" />
+      <config projectName="rewire" targetName="gtest" />
       <config projectName="rewire" targetName="gtest_main" />
-      <config projectName="rewire" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="rewire" targetName="tests" />
     </generated>
   </component>
   <component name="CMakeSettings" AUTO_RELOAD="true">
@@ -43,7 +43,19 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="712d3ce9-e873-40f6-a684-42938cca21f5" name="Default" comment="" />
+    <list default="true" id="712d3ce9-e873-40f6-a684-42938cca21f5" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/ProjectImage.cpp.o" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/ProjectImage.cpp.o" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/ReconPairs.cpp.o" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/ReconPairs.cpp.o" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/image_process_helper.cpp.o" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/image_process_helper.cpp.o" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/main.cpp.o" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rewire_node.dir/src/main.cpp.o" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmake-build-debug/devel/lib/rewire/rewire_node" afterPath="$PROJECT_DIR$/cmake-build-debug/devel/lib/rewire/rewire_node" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/ProjectImage.h" afterPath="$PROJECT_DIR$/src/ProjectImage.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/ReconPairs.cpp" afterPath="$PROJECT_DIR$/src/ReconPairs.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/ReconPairs.h" afterPath="$PROJECT_DIR$/src/ReconPairs.h" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/image_process_helper.cpp" afterPath="$PROJECT_DIR$/src/image_process_helper.cpp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main.cpp" afterPath="$PROJECT_DIR$/src/main.cpp" />
+    </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -57,8 +69,8 @@
       <file leaf-file-name="main.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="820">
-              <caret line="233" column="9" lean-forward="true" selection-start-line="233" selection-start-column="9" selection-end-line="233" selection-end-column="9" />
+            <state relative-caret-position="-16">
+              <caret line="147" column="0" lean-forward="false" selection-start-line="147" selection-start-column="0" selection-end-line="147" selection-end-column="0" />
               <folding>
                 <element signature="e#40#59#0" expanded="true" />
               </folding>
@@ -69,13 +81,14 @@
       <file leaf-file-name="ReconPairs.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/ReconPairs.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="554">
-              <caret line="153" column="69" lean-forward="true" selection-start-line="153" selection-start-column="69" selection-end-line="153" selection-end-column="69" />
+            <state relative-caret-position="-389">
+              <caret line="255" column="7" lean-forward="false" selection-start-line="255" selection-start-column="7" selection-end-line="255" selection-end-column="7" />
               <folding>
                 <element signature="e#38#61#0" expanded="true" />
                 <element signature="e#105#124#0" expanded="true" />
                 <element signature="e#528#568#0" expanded="false" />
-                <element signature="e#10040#10072#0" expanded="false" />
+                <element signature="e#6013#9671#0" expanded="false" />
+                <element signature="e#13706#13738#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -84,8 +97,8 @@
       <file leaf-file-name="ReconPairs.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ReconPairs.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="280">
-              <caret line="27" column="21" lean-forward="true" selection-start-line="27" selection-start-column="21" selection-end-line="27" selection-end-column="21" />
+            <state relative-caret-position="700">
+              <caret line="36" column="43" lean-forward="false" selection-start-line="36" selection-start-column="35" selection-end-line="36" selection-end-column="43" />
               <folding />
             </state>
           </provider>
@@ -94,8 +107,8 @@
       <file leaf-file-name="ProjectImage.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ProjectImage.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="493">
-              <caret line="33" column="25" lean-forward="false" selection-start-line="33" selection-start-column="25" selection-end-line="33" selection-end-column="25" />
+            <state relative-caret-position="452">
+              <caret line="44" column="44" lean-forward="true" selection-start-line="44" selection-start-column="44" selection-end-line="44" selection-end-column="44" />
               <folding>
                 <element signature="e#38#63#0" expanded="true" />
               </folding>
@@ -106,8 +119,8 @@
       <file leaf-file-name="ProjectImage.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/ProjectImage.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="417">
-              <caret line="28" column="27" lean-forward="false" selection-start-line="28" selection-start-column="27" selection-end-line="28" selection-end-column="27" />
+            <state relative-caret-position="472">
+              <caret line="30" column="21" lean-forward="true" selection-start-line="30" selection-start-column="21" selection-end-line="30" selection-end-column="21" />
               <folding>
                 <element signature="e#99#121#0" expanded="true" />
               </folding>
@@ -118,8 +131,8 @@
       <file leaf-file-name="image_process_helper.cpp" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/image_process_helper.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3960">
-              <caret line="198" column="51" lean-forward="false" selection-start-line="198" selection-start-column="44" selection-end-line="198" selection-end-column="51" />
+            <state relative-caret-position="293">
+              <caret line="220" column="17" lean-forward="true" selection-start-line="220" selection-start-column="17" selection-end-line="220" selection-end-column="17" />
               <folding>
                 <element signature="e#38#71#0" expanded="true" />
               </folding>
@@ -150,6 +163,8 @@
       <find>np1</find>
       <find>main</find>
       <find>neigh_curve_segments</find>
+      <find>computed</find>
+      <find>rectified</find>
     </findStrings>
     <replaceStrings>
       <replace>range</replace>
@@ -163,6 +178,9 @@
       <replace>rect_segments[1]</replace>
     </replaceStrings>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
@@ -173,12 +191,12 @@
         <option value="$PROJECT_DIR$/src/test.py" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/src/image_process_helper.h" />
-        <option value="$PROJECT_DIR$/src/image_process_helper.cpp" />
         <option value="$PROJECT_DIR$/src/ProjectImage.cpp" />
         <option value="$PROJECT_DIR$/src/ReconPairs.h" />
-        <option value="$PROJECT_DIR$/src/ProjectImage.h" />
-        <option value="$PROJECT_DIR$/src/main.cpp" />
+        <option value="$PROJECT_DIR$/src/image_process_helper.cpp" />
         <option value="$PROJECT_DIR$/src/ReconPairs.cpp" />
+        <option value="$PROJECT_DIR$/src/main.cpp" />
+        <option value="$PROJECT_DIR$/src/ProjectImage.h" />
       </list>
     </option>
   </component>
@@ -210,6 +228,7 @@
       </profile-state>
     </entry>
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
       <flattenPackages />
@@ -433,27 +452,28 @@
       <workItem from="1517479619478" duration="2723000" />
       <workItem from="1518166224759" duration="9000" />
       <workItem from="1519729750743" duration="42522000" />
+      <workItem from="1529476983516" duration="13375000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="223100000" />
+    <option name="totallyTimeSpent" value="236475000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="-4" width="1920" height="1084" extended-state="6" />
+    <frame x="239" y="7" width="1922" height="1092" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.24947916" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32822084" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3275154" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32924336" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32924336" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3425358" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3418891" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3997955" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3997955" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -650,11 +670,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/data/view1_bd0.jpg">
-      <provider selected="true" editor-type-id="images">
-        <state />
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/data/view1_bd0.jpg" />
     <entry file="file://$PROJECT_DIR$/scripts/view1_bd0.jpg">
       <provider selected="true" editor-type-id="images">
         <state />
@@ -735,16 +751,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/image_process_helper.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3960">
-          <caret line="198" column="51" lean-forward="false" selection-start-line="198" selection-start-column="44" selection-end-line="198" selection-end-column="51" />
-          <folding>
-            <element signature="e#38#71#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/include/c++/5/bits/stl_construct.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="186">
@@ -777,7 +783,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-594">
           <caret line="424" column="0" lean-forward="false" selection-start-line="424" selection-start-column="0" selection-end-line="424" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -785,7 +790,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="186">
           <caret line="535" column="0" lean-forward="false" selection-start-line="535" selection-start-column="0" selection-end-line="535" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -797,53 +801,64 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/image_process_helper.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="293">
+          <caret line="220" column="17" lean-forward="true" selection-start-line="220" selection-start-column="17" selection-end-line="220" selection-end-column="17" />
+          <folding>
+            <element signature="e#38#71#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="820">
-          <caret line="233" column="9" lean-forward="true" selection-start-line="233" selection-start-column="9" selection-end-line="233" selection-end-column="9" />
+        <state relative-caret-position="-16">
+          <caret line="147" column="0" lean-forward="false" selection-start-line="147" selection-start-column="0" selection-end-line="147" selection-end-column="0" />
           <folding>
             <element signature="e#40#59#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ProjectImage.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="493">
-          <caret line="33" column="25" lean-forward="false" selection-start-line="33" selection-start-column="25" selection-end-line="33" selection-end-column="25" />
-          <folding>
-            <element signature="e#38#63#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/ProjectImage.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="417">
-          <caret line="28" column="27" lean-forward="false" selection-start-line="28" selection-start-column="27" selection-end-line="28" selection-end-column="27" />
+        <state relative-caret-position="472">
+          <caret line="30" column="21" lean-forward="true" selection-start-line="30" selection-start-column="21" selection-end-line="30" selection-end-column="21" />
           <folding>
             <element signature="e#99#121#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/ProjectImage.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="452">
+          <caret line="44" column="44" lean-forward="true" selection-start-line="44" selection-start-column="44" selection-end-line="44" selection-end-column="44" />
+          <folding>
+            <element signature="e#38#63#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/ReconPairs.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="280">
-          <caret line="27" column="21" lean-forward="true" selection-start-line="27" selection-start-column="21" selection-end-line="27" selection-end-column="21" />
+        <state relative-caret-position="700">
+          <caret line="36" column="43" lean-forward="false" selection-start-line="36" selection-start-column="35" selection-end-line="36" selection-end-column="43" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/ReconPairs.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="554">
-          <caret line="153" column="69" lean-forward="true" selection-start-line="153" selection-start-column="69" selection-end-line="153" selection-end-column="69" />
+        <state relative-caret-position="-389">
+          <caret line="255" column="7" lean-forward="false" selection-start-line="255" selection-start-column="7" selection-end-line="255" selection-end-column="7" />
           <folding>
             <element signature="e#38#61#0" expanded="true" />
             <element signature="e#105#124#0" expanded="true" />
             <element signature="e#528#568#0" expanded="false" />
-            <element signature="e#10040#10072#0" expanded="false" />
+            <element signature="e#6013#9671#0" expanded="false" />
+            <element signature="e#13706#13738#0" expanded="false" />
           </folding>
         </state>
       </provider>

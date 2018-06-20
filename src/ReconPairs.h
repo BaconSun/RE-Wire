@@ -29,7 +29,7 @@ struct RectifiedPoint
 {
     Eigen::Vector3d anchor; // Vector3i
     Eigen::Vector3d center;
-    double xmin, xmax, y;
+    int xmin, xmax, y;
     std::vector<Eigen::Vector3d> avatars;
     bool operator==(const RectifiedPoint &) const;
     void add(Eigen::Vector3d);

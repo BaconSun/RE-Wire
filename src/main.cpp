@@ -133,6 +133,19 @@ int main (int argc, char* argv[])
     cout << "Total curve num: " << recon->total_curve_num << endl;
     cout << "Candidate size: " << recon->candidates.size() << endl;
 
+
+
+    Mat combine[2];
+
+//    for (int i = 0; i < 2; i++)
+//    {
+//        combine[i] = recon->view[i]->computed_image.clone();
+//    }
+//
+//    imshow("main", combine[0]);
+//    imshow("neigh", combine[1]);
+//    waitKey(0);
+
     int mature_segment = 0;
     for (int idx = 0; idx < recon->candidates.size(); idx++)
     {
@@ -200,7 +213,7 @@ int main (int argc, char* argv[])
 //    cout << "Total points: " << total_points << endl;
 //
 
-    Mat combine[2];
+//    Mat combine[2];
     for (int i = 0; i < 2; i++)
     {
         combine[i] = recon->view[i]->skeleton.clone();

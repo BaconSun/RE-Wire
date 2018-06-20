@@ -25,8 +25,9 @@ public:
     Eigen::Vector3d T;     // the translation matrix to the world
     Eigen::MatrixXd P;     // the Projection matrix of the camera model
     cv::Mat original_image;
-    cv::Mat rectified_image;
-    cv::Mat computed_image;
+    cv::Mat rectified_image;    // the rectified image computed by cv built-in function
+    cv::Mat computed_image;     // the rectified image computed by matrix
+//    cv::Mat conencted_computed_image;   // based on computed_image, we filled the gaps in it
     cv::Mat skeleton;
     std::vector<std::vector<cv::Point>> curve_segments;
 };

@@ -50,7 +50,7 @@ bool RectifiedPoint::operator==(const RectifiedPoint &p) const {
 }
 
 void RectifiedPoint::add(Eigen::Vector3d p) {
-    int new_x = static_cast<int>(round(p[0]));
+    auto new_x = static_cast<int>(round(p[0]));
     if (new_x < xmin)
     {
         xmin = new_x;
@@ -169,9 +169,91 @@ void ReconPairs::rectify() {
 //    cout << endl << "Magic equation:" << endl << P_after_M[0] * R_after_M[0] * view[0]->K_i * view[0]->P << endl
 //         << P_after_M[1] * R_after_M[1] * view[1]->K_i * view[1]->P << endl;
 
-    //// 1. connect a 8-adjacent path 2. thinning it 3. repair
+    //// 1. connect an 8-adjacent path 2. thinning it 3. repair
     //// To thin it we should map both rect-segment onto image (whose size may not be equal to the original one)
     //// Then, use the thin function to thin the segments
+
+    /*
+    // Try to connect the gaps between the points in the rect-segment
+    for (auto & rect_segment : rect_segments) {
+        for (auto & segment : rect_segment)
+        {
+            int i = 0;
+            while (i != (segment.size()-1))
+            {
+                // for two points, if their y are continuous, just change there xmax and xmin; else, insert another points
+                // to make sure the line is continuous.
+
+                if (segment[i].y - segment[i+1].y <= 1 && segment[i].y - segment[i+1].y >= -1)
+                {
+                    auto temp = static_cast<int>(round((segment[i].xmax + segment[i].xmin + segment[i+1].xmax + segment[i+1].xmin) / 4.0));
+                    if (segment[i].xmax + segment[i].xmin < segment[i+1].xmax + segment[i+1].xmin)
+                    {
+                        segment[i].xmax = temp; segment[i+1].xmin = temp;
+                    }
+                    else
+                    {
+                        segment[i].xmin = temp; segment[i+1].xmax = temp;
+                    }
+                }
+                else
+                {
+                    vector<RectifiedPoint> temp_segment;
+                    auto prev_center = static_cast<int>(round((segment[i].xmin + segment[i].xmax) / 2.0));
+                    auto next_center = static_cast<int>(round((segment[i+1].xmin + segment[i+1].xmax) / 2.0));
+                    int d = segment[i].y - segment[i+1].y;
+                    d = (d > 0 ? d : -d);
+                    double step = (prev_center - next_center) / 2.0 / d;
+                    step = (step > 0 ? step : -step);
+
+                    for (int j = 1; j < d; j++)
+                    {
+                        Vector3d temp_vector;
+                        temp_vector[0] = ((d-j)*prev_center + j*next_center) * 1.0 / d;
+                        temp_vector[1] = ((d-j)*segment[i].y + j*segment[i+1].y) * 1.0 / d;
+                        temp_vector[2] = 1;
+                        RectifiedPoint temp(temp_vector);
+                        temp.xmax = static_cast<int>(round(temp_vector[0] + step));
+                        temp.xmin = static_cast<int>(round(temp_vector[0] - step));
+                        temp.add(temp_vector);
+                        temp_segment.emplace_back(move(temp));
+                    }
+
+                    if (segment[i].xmax + segment[i].xmin < segment[i+1].xmax + segment[i+1].xmin)
+                    {
+                        segment[i].xmax = static_cast<int>(round(prev_center + step));
+                        segment[i+1].xmin = static_cast<int>(round(next_center - step));
+                    }
+                    else
+                    {
+                        segment[i].xmin = static_cast<int>(round(prev_center - step));
+                        segment[i+1].xmax = static_cast<int>(round(next_center + step));
+                    }
+
+                    segment.insert(segment.begin()+i+1, temp_segment.begin(), temp_segment.end());
+                    i += d-1;
+                }
+                i++;
+            }
+        }
+    }
+
+
+    // Draw the rect_segments on the connected_computed_image
+    for (int idx = 0; idx < 2; idx++) {
+        view[idx]->conencted_computed_image = Mat::zeros(view[idx]->original_image.rows, view[idx]->original_image.cols, CV_8UC1);
+        for (auto segment : rect_segments[idx])
+        {
+            for (auto rect_point: segment)
+            {
+                for (int i = rect_point.xmin; i <= rect_point.xmax; i++)
+                {
+                    view[idx]->conencted_computed_image.at<uchar>(rect_point.y, i) = 255;
+                }
+            }
+        }
+    }
+     */
 
 }
 

@@ -191,34 +191,54 @@ void curve_segment(Mat &src, vector<vector<Point>>& curve_segments)
 
     vector<Point2i> locations;
 
+    //// By using mode CV_RETR_EXTERNAL, we can extract the skeleton with one pixel wide
+    //// However, we if there exist contour inside other contours, we can repeat th following steps:
+    //// 1. find outside contours
+    //// 2. find the joint points
+    //// 3. break the joint points on the original image
+    //// Thus, the outside contours are not closed anymore. Repeat this until all contours are found by CV_RETR_EXTERNAL.
+
     // To fix the situations when the skeleton cannot give exactly one pixel line
     vector<Vec4i> hierarchy;
-    vector<vector<Point>> contours;
-    findContours(dst,contours,hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    int joint_number = 1;
 
-    Mat drawing = Mat::zeros( joint.size(), CV_8UC3 );
-
-    for( int i = 0; i< contours.size(); i++ )
+    while (joint_number != 0)
     {
-        Scalar color = Scalar(255, 255, 255);
-        drawContours( drawing, contours, i, color, 1, 8, hierarchy, 0, Point());
-    }
+        hierarchy.clear();
+        locations.clear();
+        curve_segments.clear();
+        // find outside contours
+        findContours(dst,curve_segments,hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE, Point(0, 0));
+
+        Mat drawing = Mat::zeros( joint.size(), CV_8UC3 );
+
+        for( int i = 0; i< curve_segments.size(); i++ )
+        {
+            Scalar color = Scalar(255, 255, 255);
+            drawContours( drawing, curve_segments, i, color, 1, 8, hierarchy, 0, Point());
+        }
 //    imshow( "drawing", drawing);
 //    waitKey(0);
-    cvtColor(drawing, drawing, cv::COLOR_RGB2GRAY);
-    threshold(drawing, dst, 100, 255, THRESH_BINARY);
-    jointp(dst, joint);
-    findNonZero(joint, locations);
 
+        // find joint points
+        cvtColor(drawing, drawing, cv::COLOR_RGB2GRAY);
+        threshold(drawing, drawing, 100, 255, THRESH_BINARY);
+        jointp(drawing, joint);
+        findNonZero(joint, locations);
+        joint_number = static_cast<int>(locations.size());
+//    cout << locations.size() << endl;
 
-    for (auto &location : locations) {
-        rectangle(dst, Point2i(location.x-1, location.y-1), Point2i(location.x+1, location.y+1), 0, -1);
-    }
+        // break joints
+        for (auto &location : locations) {
+            rectangle(dst, Point2i(location.x-1, location.y-1), Point2i(location.x+1, location.y+1), 0, -1);
+        }
 
 //    imshow( "seg", dst );
-    hierarchy.clear();
+//    waitKey(0);
+    }
 
-    findContours(dst,curve_segments,hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+//    findContours(dst,curve_segments,hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE, Point(0, 0));
 
 //    cout << curve_segments.size() << endl;
 
