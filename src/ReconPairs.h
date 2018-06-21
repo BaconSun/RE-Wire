@@ -7,6 +7,7 @@
 
 #include <memory>
 #include "ProjectImage.h"
+#include <ANN/ANN.h>
 
 struct Curve
 {
@@ -37,17 +38,27 @@ struct RectifiedPoint
     explicit RectifiedPoint(Eigen::Vector3d);
 };
 
+struct IndexMap
+{
+    int s;      // The no. of which segment it belongs to
+    int p;      // The no. of the point inside this segment
+};
+
 // In this class, 0 means the main view, which is the right view.
 // 1 means the neighbouring view, which is the left view.
 class ReconPairs
 {
 public:
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
+    ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ~ReconPairs();
 
     double MAX_DISTANCE_TOLERANCE = 1e-1;
 
-    std::shared_ptr<ProjectImage> view[2];     // the Main view
+    std::shared_ptr<ProjectImage> view[2];      // the Main view and the Neighbour view
+    std::shared_ptr<ProjectImage> third_view;   // the view for validation and selection of 3D curves
+    std::shared_ptr<ANNkd_tree> kdTree;         // the kdtree is built based on the third view for ANN search
+    std::vector<IndexMap> idxarray;                // the index array to map the idx from searching result to third_view->curve_segments
     int total_curve_num;
     std::vector<Curve> candidates;      // Candidates of possible 3D curves
 
@@ -67,6 +78,8 @@ public:
     void compute_3d();
     void rectify();                    // rectify two images given camera matrix
     void filter_curves(std::shared_ptr<ProjectImage>);      // Given a third view, filter out the undesired 3D curve candidates
+    void set_third_view(std::shared_ptr<ProjectImage>);
+    void build_kdtree();
 
 //    Eigen::Vector3d center[2];
 //    Eigen::Vector3d rectified_center[2];

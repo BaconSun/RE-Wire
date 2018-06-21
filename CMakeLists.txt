@@ -124,6 +124,11 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+  exlibs/ANN/include
+)
+
+link_directories(
+  exlibs/ANN/lib
 )
 
 ## Declare a C++ library
@@ -157,9 +162,10 @@ add_executable(${PROJECT_NAME}_node src/main.cpp src/image_process_helper.cpp sr
 #   ${catkin_LIBRARIES}
 # )
 
- target_link_libraries(${PROJECT_NAME}_node
-   ${catkin_LIBRARIES} ${OpenCV_LIBRARIES}
- )
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES} ${OpenCV_LIBRARIES}
+  ${CMAKE_CURRENT_SOURCE_DIR}/exlibs/ANN/lib/libANN.a
+)
 
 #############
 ## Install ##

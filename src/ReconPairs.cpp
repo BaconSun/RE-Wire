@@ -90,6 +90,48 @@ ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv)
     }
 }
 
+ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv, shared_ptr<ProjectImage> tv): ReconPairs(move(mv), move(nv))
+{
+    set_third_view(move(tv));
+}
+
+void ReconPairs::set_third_view( shared_ptr<ProjectImage> tv)
+{
+    third_view = move(tv);
+    build_kdtree();
+}
+
+void ReconPairs::build_kdtree()
+{
+    //// build the ANN tree for further use!
+    ANNpointArray points;
+    int total_points_no = 0;
+    int counter = 0;
+
+    for (const auto &i: third_view->curve_segments)
+    {
+        total_points_no += i.size();
+    }
+
+    points = annAllocPts(total_points_no, 2);
+    idxarray.clear();
+    idxarray.resize(static_cast<unsigned long>(total_points_no));
+
+    for (int i = 0; i < third_view->curve_segments.size(); i++)
+    {
+        for (int j = 0; j < third_view->curve_segments[i].size(); j++)
+        {
+            idxarray[counter].s = i;
+            idxarray[counter].p = j;
+            points[counter][0] = static_cast<double>(third_view->curve_segments[i][j].x);
+            points[counter][1] = static_cast<double>(third_view->curve_segments[i][j].y);
+            counter ++;
+        }
+    }
+
+    kdTree = std::make_shared<ANNkd_tree>(points, total_points_no, 2);
+}
+
 ReconPairs::~ReconPairs() = default;
 
 void ReconPairs::compute_fundamental()
@@ -498,6 +540,7 @@ void ReconPairs::compute_3d()
             c.curve[i] /= c.curve[i](3);
         }
     }
+    /*
 //    VectorXd temp;
 //    w = (rectified_center[0][0] - rectified_center[1][0]) * scale;
 //    temp = KR_inv * (rectified_center[1] - w * KT);
@@ -514,4 +557,5 @@ void ReconPairs::compute_3d()
 //        temp2 /= temp2[2];
 //        cout << temp2 << endl;
 //    }
+     */
 }

@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <set>
 #include <memory>
 #include <vector>
 #include <Eigen/Dense>
@@ -21,7 +20,7 @@ int main (int argc, char* argv[])
 {
     string workspace = "/home/bacon/catkin_ws/src/rewire/data/Curve/";
 
-    const int camera_num = 4;
+    const int camera_num = 5;
 
     shared_ptr<ProjectImage> camera[camera_num];
     for (int i  = 0; i < camera_num; i++)
@@ -34,9 +33,9 @@ int main (int argc, char* argv[])
     cout << endl;
 //    waitKey(0);
 
-    shared_ptr<ReconPairs> recon = make_shared<ReconPairs>(camera[0], camera[3]);
+    shared_ptr<ReconPairs> recon = make_shared<ReconPairs>(camera[0], camera[3], camera[4]);
 
-
+/*
 //    Vector4d center;
 //    center[0] = -0.29076; center[1] = -0.49210; center[2] = 0.45002; center[3] = 1.0;
 //    for (int i = 0; i < 2; i++)
@@ -46,10 +45,13 @@ int main (int argc, char* argv[])
 //        for (int j = 0; j < 3; j++)
 //            recon->center[i](j) = round(recon->center[i](j));
 //    }
+*/
 
     recon->rectify();
     recon->find_pairs();
     recon->compute_3d();
+
+    /*
 //    imshow("ImageL Original", recon->view[1]->original_image);
 //    imshow("ImageR Original", recon->view[0]->original_image);
 //    imshow("ImageL", recon->view[1]->skeleton);
@@ -109,6 +111,7 @@ int main (int argc, char* argv[])
 //         << "Total error of F:" << sum_F/count << endl;
 //
 //    return 0;
+     */
 
     int total_points = 0;
     for (auto &i:camera[0]->curve_segments)
@@ -136,6 +139,8 @@ int main (int argc, char* argv[])
 
 
     Mat combine[2];
+
+    /*
 
 //    for (int i = 0; i < 2; i++)
 //    {
@@ -214,6 +219,8 @@ int main (int argc, char* argv[])
 //
 
 //    Mat combine[2];
+    */
+
     for (auto &j: recon->candidates)
     {
 //        combine[i] = recon->view[i]->skeleton.clone();
@@ -254,7 +261,7 @@ int main (int argc, char* argv[])
         waitKey(0);
     }
 
-
+/*
 //    for (int i=0; i<recon->candidates.size(); i++)
 //    {
 //        if (i%2==0)
@@ -280,12 +287,16 @@ int main (int argc, char* argv[])
 //            }
 //        }
 //    }
+ */
 
 //    imshow("main", combine[0]);
 //    imshow("neigh", combine[1]);
 ////    imshow("ImageL", recon->view[1]->skeleton);
 ////    imshow("ImageR", recon->view[0]->skeleton);
 //    waitKey(0);
+
+    // To release the memory used by ANN
+    annClose();
 
     return 0;
 }
