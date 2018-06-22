@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <vector>
 #include <Eigen/Dense>
@@ -221,6 +222,20 @@ int main (int argc, char* argv[])
 //    Mat combine[2];
     */
 
+    ofstream fout;
+    fout.open(workspace+"3dpoints.txt");
+    for (const auto &c: recon->candidates)
+    {
+        fout << "Curve Number:" << c.idx[0] << " " << c.idx[1] << endl;
+        int counter = 1;
+        for (const auto &p: c.curve)
+        {
+            fout << counter << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
+            counter ++;
+        }
+        fout << endl;
+    }
+
     for (auto &j: recon->candidates)
     {
 //        combine[i] = recon->view[i]->skeleton.clone();
@@ -234,6 +249,7 @@ int main (int argc, char* argv[])
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[0] = 255;
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[1] = 0;
 //        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[2] = 255;
+
         for (int i = 0; i < 2; i++)
         {
             combine[i] = recon->view[i]->skeleton.clone();
