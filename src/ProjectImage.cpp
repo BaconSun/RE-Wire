@@ -43,6 +43,11 @@ void ProjectImage::process_image()
     threshold(original_image, skeleton, threshold_value, 255, THRESH_BINARY);
     skel(skeleton, skeleton);
     curve_segment(skeleton, curve_segments);
+    total_sample_points = 0;
+    for (const auto & i : curve_segments)
+    {
+        total_sample_points += i.size();
+    }
 }
 
 ProjectImage::ProjectImage(int threshold_value) : threshold_value(threshold_value)

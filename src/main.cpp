@@ -222,19 +222,19 @@ int main (int argc, char* argv[])
 //    Mat combine[2];
     */
 
-    ofstream fout;
-    fout.open(workspace+"3dpoints.txt");
-    for (const auto &c: recon->candidates)
-    {
-        fout << "Curve Number:" << c.idx[0] << " " << c.idx[1] << endl;
-        int counter = 1;
-        for (const auto &p: c.curve)
-        {
-            fout << counter << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
-            counter ++;
-        }
-        fout << endl;
-    }
+//    ofstream fout;
+//    fout.open(workspace+"3dpoints.txt");
+//    for (const auto &c: recon->candidates)
+//    {
+//        fout << "Curve Number:" << c.idx[0] << " " << c.idx[1] << endl;
+//        int counter = 1;
+//        for (const auto &p: c.curve)
+//        {
+//            fout << counter << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
+//            counter ++;
+//        }
+//        fout << endl;
+//    }
 
     for (auto &j: recon->candidates)
     {

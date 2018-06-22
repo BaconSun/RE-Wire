@@ -30,6 +30,7 @@ public:
 //    cv::Mat conencted_computed_image;   // based on computed_image, we filled the gaps in it
     cv::Mat skeleton;
     std::vector<std::vector<cv::Point>> curve_segments;
+    int total_sample_points;    // the total number of sample points in this view
 };
 
 #endif //REWIRE_PROJECTIMAGE_H

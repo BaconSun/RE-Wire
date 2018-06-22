@@ -19,15 +19,6 @@ using namespace Eigen;
 using namespace cv;
 using namespace std;
 
-HomoPoint::HomoPoint(const Point& p, int i) :idx(i)
-{
-    point[0] = static_cast<int>(round(p.x));
-    point[1] = static_cast<int>(round(p.y));
-    point[2] = 1;
-}
-
-HomoPoint::HomoPoint(Vector3d p, int i) :point(move(p)), idx(i) {}
-
 //void Curve::compute_3d(Matrix3d Q_inv)
 //{
 ////    disparity_segment.resize(segment[0].size());
@@ -45,11 +36,12 @@ HomoPoint::HomoPoint(Vector3d p, int i) :point(move(p)), idx(i) {}
 //    }
 //}
 
-bool RectifiedPoint::operator==(const RectifiedPoint &p) const {
+// Just used to check whether the latter point is inside the range of previous point.
+bool RectifiedPoint::operator == (const RectifiedPoint &p) const {
     return y == p.y and xmin-1 <= p.xmin and xmax+1 >= p.xmax;
 }
 
-void RectifiedPoint::add(Eigen::Vector3d p) {
+void RectifiedPoint::add(const Vector3d& p) {
     auto new_x = static_cast<int>(round(p[0]));
     if (new_x < xmin)
     {
@@ -59,15 +51,22 @@ void RectifiedPoint::add(Eigen::Vector3d p) {
     {
         xmax = new_x;
     }
-    avatars.emplace_back(std::move(p));
+//    avatars.emplace_back(std::move(p));
+    set_center();
 }
 
-RectifiedPoint::RectifiedPoint(Eigen::Vector3d p) {
-    anchor[0] = static_cast<int>(round(p[0]));
-    anchor[1] = static_cast<int>(round(p[1]));
-    anchor[2] = static_cast<int>(round(p[2]));
-    xmin = xmax = anchor[0];
-    y = anchor[1];
+void RectifiedPoint::set_center()
+{
+    center = Vector3d ((xmax+xmin)/2.0, y, 1.0);
+}
+
+RectifiedPoint::RectifiedPoint(const Vector3d& p) {
+    anchor[0] = p[0];
+    anchor[1] = p[1];
+    anchor[2] = p[2];
+    xmin = xmax = static_cast<int>(round(anchor[0]));
+    y = static_cast<int>(round(anchor[1]));
+    set_center();
 }
 
 ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv)
@@ -98,38 +97,7 @@ ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv,
 void ReconPairs::set_third_view( shared_ptr<ProjectImage> tv)
 {
     third_view = move(tv);
-    build_kdtree();
-}
-
-void ReconPairs::build_kdtree()
-{
-    //// build the ANN tree for further use!
-    ANNpointArray points;
-    int total_points_no = 0;
-    int counter = 0;
-
-    for (const auto &i: third_view->curve_segments)
-    {
-        total_points_no += i.size();
-    }
-
-    points = annAllocPts(total_points_no, 2);
-    idxarray.clear();
-    idxarray.resize(static_cast<unsigned long>(total_points_no));
-
-    for (int i = 0; i < third_view->curve_segments.size(); i++)
-    {
-        for (int j = 0; j < third_view->curve_segments[i].size(); j++)
-        {
-            idxarray[counter].s = i;
-            idxarray[counter].p = j;
-            points[counter][0] = static_cast<double>(third_view->curve_segments[i][j].x);
-            points[counter][1] = static_cast<double>(third_view->curve_segments[i][j].y);
-            counter ++;
-        }
-    }
-
-    kdTree = std::make_shared<ANNkd_tree>(points, total_points_no, 2);
+    build_kd_tree();
 }
 
 ReconPairs::~ReconPairs() = default;
@@ -187,7 +155,8 @@ void ReconPairs::rectify() {
                 Vector3d temp_v = P_after_M[idx] * R_after_M[idx] * view[idx]->K_i * curve_segments[idx][i][j];
                 temp_v = temp_v / temp_v[2];
                 RectifiedPoint temp_p(temp_v);
-                view[idx]->computed_image.at<uchar>(temp_p.anchor[1], temp_p.anchor[0]) = 255;
+                temp_p.idx = i;
+                view[idx]->computed_image.at<uchar>(static_cast<int>(round(temp_p.anchor[1])), static_cast<int>(round(temp_p.anchor[0]))) = 255;
                 auto p = find(rect_segments[idx][i].begin(), rect_segments[idx][i].end(), temp_p);
                 if (p != rect_segments[idx][i].end()) {
                     p->add(temp_v);
@@ -210,10 +179,6 @@ void ReconPairs::rectify() {
 //
 //    cout << endl << "Magic equation:" << endl << P_after_M[0] * R_after_M[0] * view[0]->K_i * view[0]->P << endl
 //         << P_after_M[1] * R_after_M[1] * view[1]->K_i * view[1]->P << endl;
-
-    //// 1. connect an 8-adjacent path 2. thinning it 3. repair
-    //// To thin it we should map both rect-segment onto image (whose size may not be equal to the original one)
-    //// Then, use the thin function to thin the segments
 
     /*
     // Try to connect the gaps between the points in the rect-segment
@@ -304,26 +269,24 @@ void ReconPairs::find_pairs()
     int current = 0;    // current group of the segments
     int hit = 0;
 
-    for (int i = 0; i < rect_segments[0].size(); i++)
+    for (const auto& main_segment : rect_segments[0])
     {
         multiset<int> inter;     // intersection group for the current point
         int inter_num = 0;
         multiset<int> pre_inter; // intersection group for the previous point
         int pre_inter_num = 0;
         vector<Curve> temp_segment;
-        for (int j = 0; j < rect_segments[0][i].size(); j++)
+        for (const auto& main_point : main_segment)
         {
-            HomoPoint temp_main(rect_segments[0][i][j].anchor, i);
-            vector<HomoPoint> neigh_candidates;
-            for (int k = 0; k < rect_segments[1].size(); k++)
+            vector<RectifiedPoint> neigh_candidates;
+            for (const auto& neigh_segment : rect_segments[1])
             {
-                for (int l = 0; l < rect_segments[1][k].size(); l++)
+                for (const auto& neigh_point : neigh_segment)
                 {
-                    if (rect_segments[0][i][j].anchor[1] == rect_segments[1][k][l].anchor[1])
+                    if (main_point.y == neigh_point.y)
                     {
-                        HomoPoint temp_neigh(rect_segments[1][k][l].anchor, k);
-                        inter.emplace(k);
-                        neigh_candidates.emplace_back(move(temp_neigh));
+                        inter.emplace(neigh_point.idx);
+                        neigh_candidates.emplace_back(neigh_point);
                         inter_num += 1;
                         hit++;
                     }
@@ -334,51 +297,46 @@ void ReconPairs::find_pairs()
 //            cout << "inter_num: " << inter_num << endl;
 #endif
 
-            // if the past index set is the same as the current one, we just need to push these points into the right vector
-            if (pre_inter == inter && pre_inter_num == inter_num)
+            // if the past index set is the same as the current one, we just need to push these points into the correct vector
+            if (pre_inter == inter and pre_inter_num == inter_num)
             {
                 if (inter_num !=0 )
                 {
                     for (auto &temp_s:temp_segment) {
                         double min_distance = 1e8;
-                        vector<HomoPoint>::iterator temp;
+                        vector<RectifiedPoint>::iterator temp;
                         for (auto hp = neigh_candidates.begin(); hp != neigh_candidates.end(); hp++) {
                             if (hp->idx == temp_s.idx[1]) {
-//                            Vector3f temp_vector = temp_s.neigh_curve.back()[0] + hp->point;
-                                double dist = (temp_s.segment[1].back() - hp->point).norm();
+                                double dist = (temp_s.segment[1].back().center - hp->center).norm();
                                 if (dist < min_distance) {
                                     temp = hp;
                                     min_distance = dist;
                                 }
                             }
                         }
-                        temp_s.segment[0].emplace_back(temp_main.point);
-                        temp_s.segment[1].emplace_back(move(temp->point));
+                        temp_s.segment[0].emplace_back(main_point);
+                        temp_s.segment[1].emplace_back(*temp);
                         neigh_candidates.erase(temp);
                     }
                 }
             }
-            // if the past index is different form the current one, it means that we encounter one branching point
-            // we have to cut the curve in the main_view into a new one, push back the temp vector and clear them (use std::move())
+                // if the past index is different form the current one, it means that we encounter one branching point
+                // we have to cut the curve in the main_view into a new one, push back the temp vector and clear them
             else
             {
-                if (!temp_segment.empty())
-                {
-                    for (auto &m: temp_segment)
-                    {
-                        candidates.emplace_back(move(m));
-                    }
-                }
+                // Push current temp segments into candidates. Clear the vector
+                candidates.insert(candidates.end(), temp_segment.begin(), temp_segment.end());
                 temp_segment.clear();
+
                 if (inter_num !=0 )
                 {
-                    for (auto &m: neigh_candidates)
+                    for (const auto &neigh_point: neigh_candidates)
                     {
                         Curve temp;
                         temp.idx[0] = current;
-                        temp.segment[0].emplace_back(move(temp_main.point));
-                        temp.idx[1] = m.idx;
-                        temp.segment[1].emplace_back(move(m.point));
+                        temp.segment[0].emplace_back(main_point);
+                        temp.idx[1] = neigh_point.idx;
+                        temp.segment[1].emplace_back(neigh_point);
                         temp_segment.emplace_back(move(temp));
                     }
                     current += 1;
@@ -391,155 +349,67 @@ void ReconPairs::find_pairs()
             pre_inter_num = inter_num;
             inter_num = 0;
         }
-        for (auto &m: temp_segment)
-        {
-            candidates.emplace_back(move(m));
-        }
+        candidates.insert(candidates.end(), temp_segment.begin(), temp_segment.end());
     }
+
     total_curve_num = current;
 #if DEBUG
     cout << "hit " << hit << endl;
 #endif
 }
 
-//void ReconPairs::find_pairs2()
-//{
-//    /* For each point in the main view, find the corresponding point in the neighbour view
-//     * If there is only one match point in the neighbour view, then it is
-//     * Else, both candidates should be taken into account. We should record which segment each candidate belongs to
-//     * in the neighbour view, and record it as the intersection set.
-//     * If the number of intersections changes, or the intersection set changes, it means that the intersection situation changed
-//     * Thus, we should cut off the segment in the main view into a new one, add it to @main_segments,
-//     * and add those matching points in the neighbour view to @neigh_segments
-//     * @neigh_segments may need linear interpolation to get a more precise result for further 3D construction
-//     */
-//    Vector3d para;
-//
-//    int current = 0;    // current group of the segments
-//    int hit = 0;
-//
-//    for (auto &main_curve: main_view->curve_segments)
-//    {
-//        multiset<int> inter;     // intersection group for the current point
-//        int inter_num = 0;
-//        multiset<int> pre_inter; // intersection group for the previous point
-//        int pre_inter_num = 0;
-//        auto main_idx = int(&main_curve - &(neigh_view->curve_segments[0]));
-//        vector<Curve> temp_segment;
-//        for (auto &main_p: main_curve)
-//        {
-//            HomoPoint temp_main(main_p, main_idx);
-//            // compute the parameter of the epipolar line
-//            para = fundamental * temp_main.point;
-//            para = para / (sqrt(para[0] * para[0] + para[1] * para[1]));
-//
-//            vector<HomoPoint> neigh_candidates;
-//
-//            for (auto &neigh_curve: neigh_view->curve_segments)
-//            {
-//                for (auto &neigh_p: neigh_curve)
-//                {
-//                    double dist = neigh_p.x * para[0] + neigh_p.y * para[1] + para[2];
-//                    if (fabs(dist) < MAX_DISTANCE_TOLERANCE)
-//                    {
-//                        HomoPoint temp_neigh(neigh_p, int(&neigh_curve - &(neigh_view->curve_segments[0])));
-//                        inter.emplace(temp_neigh.idx);
-//                        neigh_candidates.emplace_back(move(temp_neigh));
-//                        inter_num += 1;
-//                        hit++;
-//                    }
-//                }
-//            }
-//#if DEBUG
-//
-////            cout << "hit " << hit << endl;
-//#endif
-//
-//            // if the past index set is the same as the current one, we just need to push these points into the right vector
-//            if (pre_inter == inter && pre_inter_num == inter_num)
-//            {
-//                if (inter_num !=0 )
-//                {
-//                    for (auto &temp_s:temp_segment) {
-//                        double min_distance = 1e8;
-//                        vector<HomoPoint>::iterator temp;
-//                        for (auto hp = neigh_candidates.begin(); hp != neigh_candidates.end(); hp++) {
-//                            if (hp->idx == temp_s.neigh_idx) {
-////                            Vector3f temp_vector = temp_s.neigh_curve.back()[0] + hp->point;
-//                                double dist = (temp_s.neigh_curve.back() + hp->point).norm();
-//                                if (dist < min_distance) {
-//                                    temp = hp;
-//                                    min_distance = dist;
-//                                }
-//                            }
-//                        }
-//                        temp_s.main_curve.emplace_back(temp_main.point);
-//                        temp_s.neigh_curve.emplace_back(move(temp->point));
-//                        neigh_candidates.erase(temp);
-//                    }
-//                }
-//            }
-//            // if the past index is different form the current one, it means that we encounter one branching point
-//            // we have to cut the curve in the main_view into a new one, push back the temp vector and clear them (use std::move())
-//            else
-//            {
-//                if (!temp_segment.empty())
-//                {
-//                    for (auto &i: temp_segment)
-//                    {
-//                        candidates.emplace_back(move(i));
-//                    }
-//                }
-//                temp_segment.clear();
-//                if (inter_num !=0 )
-//                {
-//                    for (auto &i: neigh_candidates)
-//                    {
-//                        Curve temp;
-//                        temp.main_idx = current;
-//                        temp.main_curve.emplace_back(move(temp_main.point));
-//                        temp.neigh_idx = i.idx;
-//                        temp.neigh_curve.emplace_back(move(i.point));
-//                        temp_segment.emplace_back(move(temp));
-//                    }
-//                    current += 1;
-//                }
-//            }
-//
-//            neigh_candidates.clear();
-//            swap(pre_inter, inter);
-//            inter.clear();
-//            pre_inter_num = inter_num;
-//            inter_num = 0;
-//        }
-//        for (auto &i: temp_segment)
-//        {
-//            candidates.emplace_back(move(i));
-//        }
-//    }
-//    total_curve_num = current;
-//#if DEBUG
-//    cout << "hit " << hit << endl;
-//#endif
-//}
-
 void ReconPairs::compute_3d()
 {
+    cout << "!!!!!!!!!!!!!"<< endl;
+    // For sparse curve
     double w;
     for (auto &c : candidates)
     {
-        c.curve.resize(c.segment[0].size());
-        for (int i = 0; i < c.curve.size(); i++)
+        c.sparse_curve.resize(c.segment[0].size());
+        for (int i = 0; i < c.sparse_curve.size(); i++)
         {
-            w = (c.segment[0][i][0] - c.segment[1][i][0]) * scale;
-            c.curve[i] = KR_inv * (c.segment[1][i] - w * KT);
-//            cout << c.curve[i] << endl;
-            c.curve[i].conservativeResize(4);
-//            cout << c.curve[i] << endl << endl;
-            c.curve[i](3) = w;
-            c.curve[i] /= c.curve[i](3);
+            cout << i << endl;
+            w = (c.segment[0][i].center[0] - c.segment[1][i].center[0]) * scale;
+            VectorXd temp_point;
+            temp_point = KR_inv * (c.segment[1][i].center - w * KT);
+            temp_point.conservativeResize(4);
+            temp_point(3) = w;
+            temp_point /= temp_point(3);
+//            cout << " Point: " << temp_point[0] << ", " << temp_point[1] << ", " << temp_point[2] << ", " << temp_point
+//            [3] << endl;
+            c.sparse_curve[i] = temp_point.head(4);
         }
     }
+
+    // For dense curve
+    for (auto &c : candidates)
+    {
+        for (int i = 0; i < c.segment[0].size(); i++)
+        {
+            int main_step = c.segment[0][i].xmax - c.segment[0][i].xmin;
+            int neigh_step = c.segment[1][i].xmax - c.segment[1][i].xmin;
+            if (main_step == 0)
+            {
+                c.curve.emplace_back(c.sparse_curve[i]);
+            }
+            else
+            {
+                for (int x = 0; x <= main_step; x++)
+                {
+                    Vector3d main_point(c.segment[0][i].xmin + x, c.segment[0][i].y, 1.0);
+                    Vector3d neigh_point(c.segment[1][i].xmin + neigh_step * 1.0 / main_step * x, c.segment[0][i].y, 1.0);
+                    w = (main_point[0] - neigh_point[0]) * scale;
+                    VectorXd temp_point;
+                    temp_point = KR_inv * (neigh_point - w * KT);
+                    temp_point.conservativeResize(4);
+                    temp_point(3) = w;
+                    temp_point /= temp_point(3);
+                    c.curve.emplace_back(move(temp_point.head(4)));
+                }
+            }
+        }
+    }
+
     /*
 //    VectorXd temp;
 //    w = (rectified_center[0][0] - rectified_center[1][0]) * scale;
@@ -559,3 +429,29 @@ void ReconPairs::compute_3d()
 //    }
      */
 }
+
+void ReconPairs::build_kd_tree()
+{
+    // build the ANN tree for further use
+    ANNpointArray points;
+    int counter = 0;
+
+    points = annAllocPts(third_view->total_sample_points, 2);
+    idx_array.clear();
+    idx_array.resize(static_cast<unsigned long>(third_view->total_sample_points));
+
+    for (int i = 0; i < third_view->curve_segments.size(); i++)
+    {
+        for (int j = 0; j < third_view->curve_segments[i].size(); j++)
+        {
+            idx_array[counter].s = i;
+            idx_array[counter].p = j;
+            points[counter][0] = static_cast<double>(third_view->curve_segments[i][j].x);
+            points[counter][1] = static_cast<double>(third_view->curve_segments[i][j].y);
+            counter ++;
+        }
+    }
+
+    kd_tree = std::make_shared<ANNkd_tree>(points, third_view->total_sample_points, 2);
+}
+
