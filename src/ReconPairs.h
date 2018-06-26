@@ -31,6 +31,8 @@ struct Curve
 //    std::vector<Eigen::Vector4d> disparity_segment;
     int idx[2];   // Unique index to mark that there should only one valid candidate for one main_idx
 //    void compute_3d(Eigen::Matrix3d Q_inv);
+    double score;
+    Eigen::Vector4d s_pt, e_pt, s_dire, e_dire;
 };
 
 struct IndexMap
@@ -44,6 +46,11 @@ struct IndexMap
 class ReconPairs
 {
 public:
+    static const int MINIMUM_CURVE_SIZE = 5;
+    static constexpr double UNARY_THRESHOLD = 0.01;
+    static constexpr double MU = 1.0;
+    static constexpr double UNARY_SCALE = 3.5; // compensation for the lamda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
+
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ~ReconPairs();
@@ -75,7 +82,7 @@ public:
     void filter_curves();               // filter out the undesired 3D curve candidates
     void set_third_view(std::shared_ptr<ProjectImage>);
     void build_kd_tree();
-    double find_nearest_point(const Eigen::Vector3d&, int&);
+    double find_nearest_point(const Eigen::Vector4d&, int&);
 
 //    Eigen::Vector3d center[2];
 //    Eigen::Vector3d rectified_center[2];

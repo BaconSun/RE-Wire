@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 2.8.3)
 project(rewire)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
- add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_CXX_FLAGS "-m64")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -18,6 +20,46 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
+if (GUROBI_INCLUDE_DIR)
+ # in cache already
+ set(GUROBI_FOUND TRUE)
+ set(GUROBI_INCLUDE_DIRS "${GUROBI_INCLUDE_DIR}" )
+ set(GUROBI_LIBRARIES "${GUROBI_LIBRARY};${GUROBI_CXX_LIBRARY}" )
+# set(GUROBI_LIBRARIES "${GUROBI_LIBRARY}" )
+else (GUROBI_INCLUDE_DIR)
+
+find_path(GUROBI_INCLUDE_DIR
+        NAMES gurobi_c++.h
+        PATHS  "/Library/gurobi604/mac64/include"
+               "$ENV{GUROBI_HOME}/include"
+               "C:\\libs\\gurobi604\\include"
+)
+
+find_library( GUROBI_LIBRARY
+        NAMES
+        gurobi_g++5.2
+        PATHS "$ENV{GUROBI_HOME}/lib"
+              "/Library/gurobi604/mac64/lib"
+              "/Library/gurobi604/mac64/lib"
+              "C:\\libs\\gurobi604\\lib"
+        )
+
+find_library( GUROBI_CXX_LIBRARY
+        NAMES
+        gurobi80
+        PATHS "$ENV{GUROBI_HOME}/lib"
+        "/Library/gurobi604/mac64/lib"
+        "C:\\libs\\gurobi604\\lib"
+
+        )
+
+set(GUROBI_INCLUDE_DIRS "${GUROBI_INCLUDE_DIR}" )
+set(GUROBI_LIBRARIES "${GUROBI_LIBRARY};${GUROBI_CXX_LIBRARY}" )
+# set(GUROBI_LIBRARIES "${GUROBI_CXX_LIBRARY}" )
+
+endif(GUROBI_INCLUDE_DIR)
+
+#message(${GUROBI_LIBRARIES})
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -107,12 +149,13 @@ find_package(Eigen3 REQUIRED)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+
+#catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES rewire
 #  CATKIN_DEPENDS cv_bridge opencv2 roscpp rospy sensor_msgs std_msgs
 #  DEPENDS system_lib
-)
+#)
 
 ###########
 ## Build ##
@@ -121,14 +164,17 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+ src
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   exlibs/ANN/include
 )
 
+include_directories( ${GUROBI_INCLUDE_DIRS} )
+
 link_directories(
   exlibs/ANN/lib
+        /home/bacon/Others/gurobi800/linux64/lib/
 )
 
 ## Declare a C++ library
@@ -145,7 +191,9 @@ link_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/rewire_node.cpp)
-add_executable(${PROJECT_NAME}_node src/main.cpp src/image_process_helper.cpp src/image_process_helper.h src/ProjectImage.cpp src/ProjectImage.h src/ReconPairs.cpp src/ReconPairs.h)
+add_executable(${PROJECT_NAME}_node src/main.cpp src/image_process_helper.cpp src/ProjectImage.cpp src/ReconPairs.cpp)
+#add_executable(${PROJECT_NAME}_node src/test.cpp)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -165,7 +213,10 @@ add_executable(${PROJECT_NAME}_node src/main.cpp src/image_process_helper.cpp sr
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES} ${OpenCV_LIBRARIES}
   ${CMAKE_CURRENT_SOURCE_DIR}/exlibs/ANN/lib/libANN.a
+        ${GUROBI_LIBRARIES}
+
 )
+
 
 #############
 ## Install ##

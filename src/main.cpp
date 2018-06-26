@@ -51,6 +51,7 @@ int main (int argc, char* argv[])
     recon->rectify();
     recon->find_pairs();
     recon->compute_3d();
+    recon->filter_curves();
 
     /*
 //    imshow("ImageL Original", recon->view[1]->original_image);
@@ -238,18 +239,6 @@ int main (int argc, char* argv[])
 
     for (auto &j: recon->candidates)
     {
-//        combine[i] = recon->view[i]->skeleton.clone();
-//
-//        cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
-//        Vector3d temp_center = recon->view[i]->P * center;
-//        temp_center = temp_center / temp_center[2];
-//
-//        cout << "Image: " << i << "cneter: "  << temp_center << endl;
-//
-//        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[0] = 255;
-//        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[1] = 0;
-//        combine[i].at<Vec3b>(Point(int(temp_center[0]), int(temp_center[1])))[2] = 255;
-
         for (int i = 0; i < 2; i++)
         {
             combine[i] = recon->view[i]->skeleton.clone();
@@ -272,6 +261,7 @@ int main (int argc, char* argv[])
             }
 
         }
+        cout << "Candidate: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
         imshow("main", combine[0]);
         imshow("neigh", combine[1]);
         waitKey(0);

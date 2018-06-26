@@ -9,9 +9,11 @@
 
 #if DEBUG
 #include <iostream>
+#include <algorithm>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
+#include <gurobi_c++.h>
 
 #endif
 
@@ -360,7 +362,6 @@ void ReconPairs::find_pairs()
 
 void ReconPairs::compute_3d()
 {
-    cout << "!!!!!!!!!!!!!"<< endl;
     // For sparse curve
     double w;
     for (auto &c : candidates)
@@ -368,15 +369,12 @@ void ReconPairs::compute_3d()
         c.sparse_curve.resize(c.segment[0].size());
         for (int i = 0; i < c.sparse_curve.size(); i++)
         {
-            cout << i << endl;
             w = (c.segment[0][i].center[0] - c.segment[1][i].center[0]) * scale;
             VectorXd temp_point;
             temp_point = KR_inv * (c.segment[1][i].center - w * KT);
             temp_point.conservativeResize(4);
             temp_point(3) = w;
             temp_point /= temp_point(3);
-//            cout << " Point: " << temp_point[0] << ", " << temp_point[1] << ", " << temp_point[2] << ", " << temp_point
-//            [3] << endl;
             c.sparse_curve[i] = temp_point.head(4);
         }
     }
@@ -455,3 +453,196 @@ void ReconPairs::build_kd_tree()
     kd_tree = std::make_shared<ANNkd_tree>(points, third_view->total_sample_points, 2);
 }
 
+double ReconPairs::find_nearest_point(const Vector4d& target_point, int& idx)
+{
+    ANNpoint query_point;
+    ANNidxArray idxs;
+    ANNdistArray dists;
+    double eps = 0.0;
+
+    query_point = annAllocPt(2);
+    idxs = new ANNidx[1];
+    dists = new ANNdist[1];
+
+    Vector3d temp = third_view->P * target_point;
+    temp /= temp[2];
+
+    query_point[0] = temp[0];
+    query_point[1] = temp[1];
+
+    kd_tree->annkSearch(query_point, 1, idxs, dists, eps);
+
+    idx = idxs[0];
+    double distance = dists[0];
+
+    delete[] idxs;
+    delete[] dists;
+
+    return distance;
+
+}
+
+void ReconPairs::filter_curves()
+{
+    //// Fisrt, seive out those segments whose points are too few
+    auto itr = candidates.begin();
+    while (itr < candidates.end())
+    {
+        if (itr->curve.size() < MINIMUM_CURVE_SIZE)
+        {
+            candidates.erase(itr);
+        }
+        else
+        {
+            itr++;
+        }
+    }
+
+    //// Then, calculate the unary confidence score for each curve and filter out those whose cost is greater than threshold
+
+    // The diagonal length of the third view.
+    double diag = sqrt(pow(third_view->original_image.rows, 2) + pow(third_view->original_image.cols, 2));
+    for (auto &c: candidates)
+    {
+        double distances = 0;
+        int idx;
+        for (const auto &p: c.curve)
+        {
+            distances += find_nearest_point(p, idx);
+        }
+        c.score = distances / c.curve.size() / diag;
+    }
+
+    itr = candidates.begin();
+    while (itr < candidates.end())
+    {
+        if (itr->score > UNARY_THRESHOLD)
+        {
+            candidates.erase(itr);
+        }
+        else
+        {
+            itr++;
+        }
+    }
+
+    // Return if candidate size are too few.
+    if (candidates.size() <= 1)
+    {
+        return;
+    }
+
+    // calculate all start_point end_point and directions for all curve candidates for further use
+    for (auto &c : candidates)
+    {
+        c.s_pt = c.curve.front();
+        c.e_pt = c.curve.back();
+        c.s_dire = (*(c.curve.begin()+1) - c.s_pt).normalized();
+        c.e_dire = (*(c.curve.end() - 2) - c.e_pt).normalized();
+    }
+
+    //// Afterwards, compute the binary pairwise cost for each possible pairs and find the unique set with optimization
+    int num_of_var;         // number of all variables. denote as n
+    vector<double> unary_cost;    // list of unary_cost
+    vector<double> binary_cost;   // list of binary_cost, size:n*(n-1), n rows, (n-1) cols. Omit the 0 score for oneself
+    vector<vector<int>> unique_list;    // one list can only have one valid candidate. their idx[0]s should be same
+
+    num_of_var = static_cast<int>(candidates.size());
+    unary_cost.resize(static_cast<size_t>(num_of_var));
+    binary_cost.resize((num_of_var * (num_of_var - 1))/2);
+    for (int i = 0; i < num_of_var; i++)
+    {
+        bool found = false;
+        for (auto &l: unique_list)
+        {
+            if (candidates[l.front()].idx[0] == candidates[i].idx[0])
+            {
+                found = true;
+                l.emplace_back(i);
+                break;
+            }
+        }
+        if (not found)
+        {
+            vector<int> temp = {i};
+            unique_list.emplace_back(move(temp));
+        }
+
+        unary_cost[i] = candidates[i].score * UNARY_SCALE; // multiply the UNARY_SCALE as compemsation for lambda in the paper
+
+        for (int j = 0; j < num_of_var - i - 1; j++)
+        {
+            int idx = (i * (2*num_of_var - 1 - i)) / 2 + j;
+            double dists[4], angles[4];
+
+            dists[0] = (candidates[i].s_pt - candidates[j].s_pt).norm();
+            dists[1] = (candidates[i].s_pt - candidates[j].e_pt).norm();
+            dists[2] = (candidates[i].e_pt - candidates[j].s_pt).norm();
+            dists[3] = (candidates[i].e_pt - candidates[j].e_pt).norm();
+
+            angles[0] = candidates[i].s_dire.adjoint() * candidates[j].s_dire;
+            angles[1] = candidates[i].s_dire.adjoint() * candidates[j].e_dire;
+            angles[2] = candidates[i].e_dire.adjoint() * candidates[j].s_dire;
+            angles[3] = candidates[i].e_dire.adjoint() * candidates[j].e_dire;
+
+            auto min_idx = min_element(dists, dists+4);
+            binary_cost[idx] = *min_idx + MU * (angles[min_idx-dists] + 1) / 2;
+        }
+    }
+
+    GRBEnv env = GRBEnv();
+    vector<GRBVar> var_list;
+    vector<GRBVar> vars1, vars2;
+    GRBModel MIPmodel = GRBModel(env);
+
+    var_list.resize(num_of_var);
+    for (auto &var: var_list)
+    {
+        var = MIPmodel.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+    }
+    vars1.resize(binary_cost.size());
+    vars2.resize(binary_cost.size());
+    for (int i = 0; i < num_of_var; i++)
+    {
+        for (int j = 0; j < num_of_var - i - 1; j++)
+        {
+            int idx = (i * (2 * num_of_var - 1 - i)) / 2 + j;
+            vars1[idx] = var_list[i];
+            vars2[idx] = var_list[i+j+1];
+        }
+    }
+
+
+    // add objective
+    GRBQuadExpr quad_obj;
+
+    quad_obj.addTerms(&unary_cost[0], &var_list[0], num_of_var);
+    quad_obj.addTerms(&binary_cost[0], &vars1[0], &vars2[0], binary_cost.size());
+
+    MIPmodel.setObjective(quad_obj, GRB_MINIMIZE);
+
+    // add constraints for unique_list
+    for (auto &l: unique_list)
+    {
+        cout << "Constrain No.: " << &l - &unique_list.front() << endl;
+        GRBLinExpr constraint;
+        for (auto &t: l)
+        {
+            constraint += var_list[t];
+            cout << t << " ";
+        }
+        cout << endl << endl;
+        MIPmodel.addConstr(constraint, GRB_EQUAL, 1.0);
+    }
+
+    // Optimize model
+    MIPmodel.optimize();
+
+    for(int i = 0; i < num_of_var; i++)
+    {
+        cout << "Result: " << var_list[i].get(GRB_DoubleAttr_X) << " Index: " << candidates[i].idx[0] << " " << candidates[i].idx[1] << endl;
+    }
+
+    //// Finally, use mTSP to solve the problem.
+
+}
