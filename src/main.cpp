@@ -237,15 +237,15 @@ int main (int argc, char* argv[])
 //        fout << endl;
 //    }
 
-    for (auto &j: recon->candidates)
+    /*for (auto &w: recon->candidates)
     {
         for (int i = 0; i < 2; i++)
         {
             combine[i] = recon->view[i]->skeleton.clone();
             cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
-
-            for (auto &p: j.curve)
+            for (auto &p: w.curve)
             {
+
                 Vector3d temp = recon->view[i]->P * p;
                 temp = temp / temp[2];
                 if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
@@ -259,13 +259,46 @@ int main (int argc, char* argv[])
                     cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
                 }
             }
-
+            cout << "Candidate: " << w.idx[0] << " " << w.idx[1] << " Score: " << w.score << endl;
         }
-        cout << "Candidate: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
         imshow("main", combine[0]);
         imshow("neigh", combine[1]);
         waitKey(0);
+    }*/
+
+    for (auto &w: recon->wires)
+    {
+        for (auto &j: w)
+        {
+
+            for (int i = 0; i < 2; i++)
+            {
+                combine[i] = recon->view[i]->skeleton.clone();
+                cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+                for (auto &p: j.curve)
+                {
+
+                    Vector3d temp = recon->view[i]->P * p;
+                    temp = temp / temp[2];
+                    if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
+                    {
+                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
+                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+                    }
+                    else
+                    {
+                        cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
+                    }
+                }
+            }
+            cout << "Candidate: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
+            imshow("main", combine[0]);
+            imshow("neigh", combine[1]);
+            waitKey(0);
+        }
     }
+
 
 /*
 //    for (int i=0; i<recon->candidates.size(); i++)

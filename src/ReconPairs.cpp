@@ -453,7 +453,7 @@ void ReconPairs::build_kd_tree()
     kd_tree = std::make_shared<ANNkd_tree>(points, third_view->total_sample_points, 2);
 }
 
-double ReconPairs::find_nearest_point(const Vector4d& target_point, int& idx)
+double ReconPairs::find_nearest_point(const Vector3d& target_point, int& idx)
 {
     ANNpoint query_point;
     ANNidxArray idxs;
@@ -464,11 +464,8 @@ double ReconPairs::find_nearest_point(const Vector4d& target_point, int& idx)
     idxs = new ANNidx[1];
     dists = new ANNdist[1];
 
-    Vector3d temp = third_view->P * target_point;
-    temp /= temp[2];
-
-    query_point[0] = temp[0];
-    query_point[1] = temp[1];
+    query_point[0] = target_point[0];
+    query_point[1] = target_point[1];
 
     kd_tree->annkSearch(query_point, 1, idxs, dists, eps);
 
@@ -502,15 +499,75 @@ void ReconPairs::filter_curves()
 
     // The diagonal length of the third view.
     double diag = sqrt(pow(third_view->original_image.rows, 2) + pow(third_view->original_image.cols, 2));
-    for (auto &c: candidates)
+
+    vector<vector<Vector3d>> projected_points;
+    vector<vector<Vector3d>> projected_directions;
+
+    projected_points.resize(candidates.size());
+    projected_directions.resize(candidates.size());
+
+    for (int i = 0; i < candidates.size(); i++)
+    {
+        projected_points[i].resize(candidates[i].curve.size());
+        for (int j = 0; j < candidates[i].curve.size(); j++)
+        {
+            projected_points[i][j] = third_view->P * candidates[i].curve[j];
+            projected_points[i][j] /= projected_points[i][j][2];
+        }
+    }
+
+    for (int i = 0; i < projected_points.size(); i++)
+    {
+        projected_directions[i].resize(projected_points[i].size());
+        for (int j = 0; j < projected_points[i].size(); j++)
+        {
+            if (j == 0)
+            {
+                projected_directions[i][j] = (projected_points[i][j+1] - projected_points[i][j]).normalized();
+            }
+            else if (j == projected_directions[i].size() - 1)
+            {
+                projected_directions[i][j] = (projected_points[i][j-1] - projected_points[i][j]).normalized();
+            }
+            else
+            {
+                projected_directions[i][j] = (projected_points[i][j+1] - projected_points[i][j-1]).normalized();
+            }
+        }
+    }
+
+
+    for (int i = 0; i < projected_points.size(); i++)
     {
         double distances = 0;
         int idx;
-        for (const auto &p: c.curve)
+        for (int j = 0; j < projected_points[i].size(); j++)
         {
-            distances += find_nearest_point(p, idx);
+            distances += find_nearest_point(projected_points[i][j], idx) / diag;
+            Point p1, p2;
+            if (idx_array[idx].p == 0)
+            {
+                p1 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p+1];
+                p2 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p];
+            }
+            else if (idx_array[idx].p == third_view->curve_segments[idx_array[idx].s].size() - 1)
+            {
+                p1 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p-1];
+                p2 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p];
+            }
+            else
+            {
+                p1 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p-1];
+                p2 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p+1];
+            }
+            Vector3d direction;
+            direction[0] = p1.x - p2.x;
+            direction[1] = p1.y - p2.y;
+            direction[2] = 0;
+            direction = direction.normalized();
+            distances += ETA * (1 - fabs(direction.dot(projected_directions[i][j])));
         }
-        c.score = distances / c.curve.size() / diag;
+        candidates[i].score = distances / candidates[i].curve.size();
     }
 
     itr = candidates.begin();
@@ -591,8 +648,8 @@ void ReconPairs::filter_curves()
     }
 
     GRBEnv env = GRBEnv();
-    vector<GRBVar> var_list;
-    vector<GRBVar> vars1, vars2;
+    vector<GRBVar> var_list;    // To store all variables
+    vector<GRBVar> vars1, vars2;    // (var1, var2) are the pairs for quadratic constraints
     GRBModel MIPmodel = GRBModel(env);
 
     var_list.resize(num_of_var);
@@ -624,14 +681,11 @@ void ReconPairs::filter_curves()
     // add constraints for unique_list
     for (auto &l: unique_list)
     {
-        cout << "Constrain No.: " << &l - &unique_list.front() << endl;
         GRBLinExpr constraint;
         for (auto &t: l)
         {
             constraint += var_list[t];
-            cout << t << " ";
         }
-        cout << endl << endl;
         MIPmodel.addConstr(constraint, GRB_EQUAL, 1.0);
     }
 
@@ -645,4 +699,209 @@ void ReconPairs::filter_curves()
 
     //// Finally, use mTSP to solve the problem.
 
+    vector<int> mapping;    // Index mapping between selected candidates and var_list[]
+    for (int i = 0; i < num_of_var; i++)
+    {
+        if (var_list[i].get(GRB_DoubleAttr_X) > 0.5)
+        {
+            mapping.emplace_back(i);
+        }
+    }
+
+    int num_of_curves = mapping.size();
+    int num_of_nodes = num_of_curves + 1; // Add V0 as Source
+    int num_of_edges = num_of_nodes * num_of_nodes;  // We have to consider the common source V0 when calculate all edges
+
+    // initiate all vars
+    vector<GRBVar> variables;
+    GRBEnv env2 = GRBEnv();
+    GRBModel mTSPmodel = GRBModel(env2);
+
+    variables.resize(num_of_edges + num_of_curves + 1); // besides all edge pairs, we have take u_i and k into consideration except u_0=0
+    for (int i = 0; i < num_of_edges; i++)
+    {
+        variables[i] = mTSPmodel.addVar(0.0, 1.0, 0.0, GRB_BINARY);     // x_ij is binary
+    }
+    for (int i = num_of_edges; i < num_of_edges + num_of_curves + 1; i++)
+    {
+        variables[i] = mTSPmodel.addVar(0.0, num_of_curves, 0.0, GRB_INTEGER);   // u_i and k are integer
+    }
+
+    // Set objectives
+    vector<double> cost;
+    vector<GRBVar> vars;
+    cost.resize(num_of_edges);
+    for (int i = 0; i < num_of_nodes; i++)    // Set w_ij
+    {
+        for (int j = 0; j < num_of_nodes; j++)
+        {
+            if (i == j or i == 0 or j == 0)
+            {
+                cost[i*(num_of_nodes) + j] = 0;
+            }
+            else
+            {
+                cost[i*(num_of_nodes) + j] = binary_cost[(mapping[i-1] * (2*num_of_var - 1 - mapping[i-1])) / 2 + mapping[j-1]];
+            }
+        }
+    }
+    cost.emplace_back(*(max_element(cost.begin(), cost.end()))/5);     // Set Ita
+    vars.insert(vars.begin(), variables.begin(), variables.begin()+num_of_edges);       // add x_ij
+    vars.emplace_back(variables.back());        // add k
+
+    GRBLinExpr mTSP_obj;
+
+    mTSP_obj.addTerms(&cost[0], &vars[0], num_of_edges + 1);
+
+    mTSPmodel.setObjective(mTSP_obj, GRB_MINIMIZE);
+
+    // Add constraint
+    vector<double> coeffs;
+    vector<GRBVar> terms1;
+    vector<GRBVar> terms2;
+
+    // Constraint 1: exactly one of the incoming and outgoing edges of a node needs to be selected in the solution
+    terms1.resize(num_of_curves);
+    terms2.resize(num_of_curves);
+    coeffs.resize(num_of_curves);
+    fill(coeffs.begin(), coeffs.end(), 1);
+    for (int i = 1; i < num_of_nodes; i++)
+    {
+        for (int j = 0; j < num_of_nodes; j++)
+        {
+            if (i == j)
+            {
+                continue;
+            }
+            int idx = (j<i ? j : j-1);
+            terms1[idx] = variables[j*num_of_nodes + i];
+            terms2[idx] = variables[i*num_of_nodes + j];
+        }
+        GRBLinExpr constraint1, constraint2;
+        constraint1.addTerms(&coeffs[0], &terms1[0], num_of_curves);
+        mTSPmodel.addConstr(constraint1, GRB_EQUAL, 1.0);
+        constraint2.addTerms(&coeffs[0], &terms2[0], num_of_curves);
+        mTSPmodel.addConstr(constraint2, GRB_EQUAL, 1.0);
+    }
+
+    // Constraint 2: each of the k paths is required to start and end at the start node V0
+    {
+        for (int i = 1; i < num_of_nodes; i++)
+        {
+            terms1[i-1] = variables[i];
+            terms2[i-1] = variables[i*num_of_nodes];
+        }
+        coeffs.emplace_back(-1);
+        terms1.emplace_back(variables.back());
+        terms2.emplace_back(variables.back());
+        GRBLinExpr constraint1, constraint2;
+        constraint1.addTerms(&coeffs[0], &terms1[0], num_of_curves + 1);
+        constraint2.addTerms(&coeffs[0], &terms2[0], num_of_curves + 1);
+        mTSPmodel.addConstr(constraint1, GRB_EQUAL, 0.0);
+        mTSPmodel.addConstr(constraint2, GRB_EQUAL, 0.0);
+    }
+
+    // Constraint 3: Subtour elimination constraints
+    // Important: remember that there is no u_0 as u_0 is set as 0
+    // -k*x_0i + (b-1)x_0i -x_i0 + u_i + k <= b
+    for (int i = 1; i < num_of_nodes; i++)
+    {
+        GRBQuadExpr constraint;
+        constraint += - variables.back() * variables[i] + (num_of_curves-1) * variables[i]
+                      - variables[i*num_of_nodes] + variables[num_of_edges+i-1] + variables.back();
+        mTSPmodel.addQConstr(constraint, GRB_LESS_EQUAL, num_of_curves);
+    }
+
+    // Constraint 4: Subtour elimination constraints
+    // u_i + x_0i >= 2
+    for (int i = 1; i < num_of_nodes; i++)
+    {
+        GRBLinExpr constraint;
+        constraint += variables[i] + variables[num_of_edges+i-1];
+        mTSPmodel.addConstr(constraint, GRB_GREATER_EQUAL, 2);
+    }
+
+    // Constraint 5: Subtour elimination constraints
+    // u_i - u_j + (b-k-1)x_ij + (b-1-k)x_ji + k <= b
+    for (int i = 1; i < num_of_nodes; i++)
+    {
+        for (int j = 1; j < num_of_nodes; j++)
+        {
+            if (i==j)
+            {
+                continue;
+            }
+            GRBQuadExpr constraint;
+            constraint += variables[num_of_edges+i-1] - variables[num_of_edges+j-1]
+                        + (num_of_curves + 1 - variables.back()) * variables[i*num_of_nodes+j]
+                        + (num_of_curves - 1 - variables.back()) * variables[j*num_of_nodes+i]
+                        + variables.back();
+            mTSPmodel.addQConstr(constraint, GRB_LESS_EQUAL, num_of_curves);
+        }
+    }
+
+    // Optimize
+    mTSPmodel.optimize();
+
+    // Store the result
+    int num_of_lines = static_cast<int>(round(variables.back().get(GRB_DoubleAttr_X)));
+    wires.resize(num_of_lines);
+
+
+    cout << "\\ " ;
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << i << " ";
+    }
+    cout << endl;
+
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << i << " ";
+        for (int j = 0; j < num_of_nodes ; j++)
+        {
+            cout << static_cast<int>(round(variables[i*num_of_nodes + j].get(GRB_DoubleAttr_X))) << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "u ";
+    for (int i = 0; i < num_of_curves; i++)
+    {
+        cout << static_cast<int>(round(variables[num_of_edges + i].get(GRB_DoubleAttr_X))) << " ";
+    }
+    cout << endl;
+
+    cout << "k ";
+    cout << static_cast<int>(round(variables.back().get(GRB_DoubleAttr_X))) << " " << endl;
+
+    for (int i = 1; i < num_of_nodes; i++)
+    {
+        if (variables[i].get(GRB_DoubleAttr_X) > 0.5)
+        {
+            vector<Curve> temp;
+            int last_id = i;
+            while (last_id != 0)
+            {
+                temp.emplace_back(candidates[mapping[last_id-1]]);
+                int j;
+                for (j = 0; j < num_of_nodes; j++)
+                {
+                    if (variables[last_id*num_of_nodes + j].get(GRB_DoubleAttr_X) > 0.5)
+                    {
+                        break;
+                    }
+                }
+                if (j == num_of_nodes)
+                {
+                    cout << "ERROR!!! Cannot find next node!" << endl;
+                }
+                else
+                {
+                    last_id = j;
+                }
+            }
+            wires.emplace_back(move(temp));
+        }
+    }
 }

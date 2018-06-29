@@ -47,9 +47,10 @@ class ReconPairs
 {
 public:
     static const int MINIMUM_CURVE_SIZE = 5;
-    static constexpr double UNARY_THRESHOLD = 0.01;
-    static constexpr double MU = 1.0;
-    static constexpr double UNARY_SCALE = 3.5; // compensation for the lamda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
+    static constexpr double UNARY_THRESHOLD = 0.1; // According to paper, 0.0015 - 0.008
+    static constexpr double MU = 1;          // Acoording to paper, 1
+    static constexpr double ETA = 0.3;        // According to paper, 0.001-0.004
+    static constexpr double UNARY_SCALE = 4.5; //  According to paper, 2.5 - 5. Compensation for the lambda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
 
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
@@ -63,6 +64,8 @@ public:
     std::vector<IndexMap> idx_array;                // the index array to map the idx from searching result to third_view->curve_segments
     int total_curve_num;
     std::vector<Curve> candidates;      // Candidates of possible 3D curves
+
+    std::vector<std::vector<Curve>> wires;
 
     std::vector<std::vector<Eigen::Vector3d>> curve_segments[2];
 
@@ -82,12 +85,11 @@ public:
     void filter_curves();               // filter out the undesired 3D curve candidates
     void set_third_view(std::shared_ptr<ProjectImage>);
     void build_kd_tree();
-    double find_nearest_point(const Eigen::Vector4d&, int&);
+    double find_nearest_point(const Eigen::Vector3d&, int&);
 
 //    Eigen::Vector3d center[2];
 //    Eigen::Vector3d rectified_center[2];
 //    Eigen::MatrixXd P_matrix[2];
 };
-
 
 #endif //REWIRE_RECONPAIRS_H
