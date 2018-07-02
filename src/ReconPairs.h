@@ -47,10 +47,10 @@ class ReconPairs
 {
 public:
     static const int MINIMUM_CURVE_SIZE = 5;
-    static constexpr double UNARY_THRESHOLD = 0.1; // According to paper, 0.0015 - 0.008
-    static constexpr double MU = 1;          // Acoording to paper, 1
+    static constexpr double UNARY_THRESHOLD = 100; // According to paper, 0.0015 - 0.008
+    static constexpr double MU = 0.75;          // Acoording to paper, 1
     static constexpr double ETA = 0.3;        // According to paper, 0.001-0.004
-    static constexpr double UNARY_SCALE = 4.5; //  According to paper, 2.5 - 5. Compensation for the lambda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
+    static constexpr double UNARY_SCALE = 4500; //  According to paper, 2.5 - 5. Compensation for the lambda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
 
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);

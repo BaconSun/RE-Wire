@@ -21,7 +21,7 @@ int main (int argc, char* argv[])
 {
     string workspace = "/home/bacon/catkin_ws/src/rewire/data/Curve/";
 
-    const int camera_num = 5;
+    const int camera_num = 6;
 
     shared_ptr<ProjectImage> camera[camera_num];
     for (int i  = 0; i < camera_num; i++)
@@ -51,7 +51,7 @@ int main (int argc, char* argv[])
     recon->rectify();
     recon->find_pairs();
     recon->compute_3d();
-    recon->filter_curves();
+//    recon->filter_curves();
 
     /*
 //    imshow("ImageL Original", recon->view[1]->original_image);
@@ -142,16 +142,17 @@ int main (int argc, char* argv[])
 
     Mat combine[2];
 
-    /*
 
-//    for (int i = 0; i < 2; i++)
-//    {
-//        combine[i] = recon->view[i]->computed_image.clone();
-//    }
-//
-//    imshow("main", combine[0]);
-//    imshow("neigh", combine[1]);
-//    waitKey(0);
+    for (int i = 0; i < 2; i++)
+    {
+        combine[i] = recon->view[i]->computed_image.clone();
+    }
+
+    imshow("main", combine[0]);
+    imshow("neigh", combine[1]);
+    waitKey(0);
+
+     /*
 
 //    int mature_segment = 0;
 //    for (int idx = 0; idx < recon->candidates.size(); idx++)
@@ -237,7 +238,7 @@ int main (int argc, char* argv[])
 //        fout << endl;
 //    }
 
-    /*for (auto &w: recon->candidates)
+    for (auto &w: recon->candidates)
     {
         for (int i = 0; i < 2; i++)
         {
@@ -264,8 +265,9 @@ int main (int argc, char* argv[])
         imshow("main", combine[0]);
         imshow("neigh", combine[1]);
         waitKey(0);
-    }*/
+    }
 
+    /*
     for (auto &w: recon->wires)
     {
         for (auto &j: w)
@@ -292,12 +294,13 @@ int main (int argc, char* argv[])
                     }
                 }
             }
-            cout << "Candidate: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
+            cout << "wire: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
             imshow("main", combine[0]);
             imshow("neigh", combine[1]);
             waitKey(0);
         }
     }
+     */
 
 
 /*

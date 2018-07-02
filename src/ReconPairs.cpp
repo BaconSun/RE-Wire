@@ -2,24 +2,46 @@
 // Created by bacon on 1/2/18.
 //
 
-#include "ReconPairs.h"
-#include <set>
-
 #define DEBUG 1
 
-#if DEBUG
 #include <iostream>
+#include "ReconPairs.h"
+#include <set>
 #include <algorithm>
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <gurobi_c++.h>
 
+#if DEBUG
+#include <iomanip>
 #endif
 
 using namespace Eigen;
 using namespace cv;
 using namespace std;
+
+#if DEBUG
+void help_print (vector<vector<double>> l, int num_of_var)
+{
+    cout << setw(8) << "\t\t";
+    for (int i = 0; i < num_of_var; i++)
+    {
+        cout << setw(8) << i << "\t";
+    }
+    cout << endl;
+    for (int i = 0; i < num_of_var; i++)
+    {
+        cout << setw(8) << i << "\t";
+        for (int j = 0; j < num_of_var; j++)
+        {
+            cout << setw(8) << l[i][j] << "\t";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+#endif
 
 //void Curve::compute_3d(Matrix3d Q_inv)
 //{
@@ -536,10 +558,15 @@ void ReconPairs::filter_curves()
         }
     }
 
+#if DEBUG
+    cout << "Unary Cost: " << endl;
+    int remove_counter = 0;
+#endif
 
     for (int i = 0; i < projected_points.size(); i++)
     {
         double distances = 0;
+        double angle = 0;
         int idx;
         for (int j = 0; j < projected_points[i].size(); j++)
         {
@@ -565,9 +592,21 @@ void ReconPairs::filter_curves()
             direction[1] = p1.y - p2.y;
             direction[2] = 0;
             direction = direction.normalized();
-            distances += ETA * (1 - fabs(direction.dot(projected_directions[i][j])));
+            angle += ETA * (1 - fabs(direction.dot(projected_directions[i][j])));
         }
-        candidates[i].score = distances / candidates[i].curve.size();
+        candidates[i].score = (distances + angle) / candidates[i].curve.size();
+#if DEBUG
+        if (candidates[i].score > UNARY_THRESHOLD)
+        {
+            remove_counter++;
+        }
+        else
+        {
+            cout << i-remove_counter << " total cost with scale:" << candidates[i].score * UNARY_SCALE
+                 << " distance cost: " << distances << " angle cost: " << angle << endl;
+        }
+
+#endif
     }
 
     itr = candidates.begin();
@@ -594,19 +633,59 @@ void ReconPairs::filter_curves()
     {
         c.s_pt = c.curve.front();
         c.e_pt = c.curve.back();
-        c.s_dire = (*(c.curve.begin()+1) - c.s_pt).normalized();
-        c.e_dire = (*(c.curve.end() - 2) - c.e_pt).normalized();
+        c.s_dire = (*(c.curve.begin()+1) * 4 / 3 - *(c.curve.begin()+2) / 3 - c.s_pt).normalized();
+        c.e_dire = (*(c.curve.end() - 2) * 4 / 3 - *(c.curve.end() - 3) / 3 - c.e_pt).normalized();
     }
 
     //// Afterwards, compute the binary pairwise cost for each possible pairs and find the unique set with optimization
     int num_of_var;         // number of all variables. denote as n
     vector<double> unary_cost;    // list of unary_cost
     vector<double> binary_cost;   // list of binary_cost, size:n*(n-1), n rows, (n-1) cols. Omit the 0 score for oneself
+//    vector<vector<double>> binary_cost;
     vector<vector<int>> unique_list;    // one list can only have one valid candidate. their idx[0]s should be same
-
     num_of_var = static_cast<int>(candidates.size());
     unary_cost.resize(static_cast<size_t>(num_of_var));
     binary_cost.resize((num_of_var * (num_of_var - 1))/2);
+#if DEBUG
+    vector<vector<double>> distance_cost;
+    vector<vector<double>> angle_cost;
+    vector<vector<double>> total_cost;
+    distance_cost.resize(num_of_var);
+    angle_cost.resize(num_of_var);
+    total_cost.resize(num_of_var);
+    vector<double> temp;
+    temp.resize(num_of_var);
+    fill(temp.begin(), temp.end(), 0);
+    fill(distance_cost.begin(), distance_cost.end(), temp);
+    fill(angle_cost.begin(), angle_cost.end(), temp);
+    fill(total_cost.begin(), total_cost.end(), temp);
+
+//    cout << "Check curve inside 8" << endl << endl;
+//    for (const auto &i : candidates[8].segment[0])
+//        cout << i.xmin << " " << i.xmax << endl << endl;
+//    for (const auto &i : candidates[8].segment[1])
+//        cout << i.xmin << " " << i.xmax << endl << endl;
+//    for (const auto &i : candidates[8].curve)
+//        cout << i << endl << endl;
+//    cout << "Check curve inside 12" << endl << endl;
+//    for (const auto &i : candidates[12].segment[0])
+//        cout << i.xmin << " " << i.xmax << endl << endl;
+//    for (const auto &i : candidates[12].segment[1])
+//        cout << i.xmin << " " << i.xmax << endl << endl;
+//    for (const auto &i : candidates[12].curve)
+//        cout << i << endl << endl;
+
+#endif
+//    binary_cost.resize(num_of_var);
+//    for (auto &i : binary_cost)
+//    {
+//        i.resize(num_of_var);
+//    }
+
+    // calculate binary cost and store smallest one which not in the same group in the first place of each row
+//    for (int i = 0; i < num_of_var; i++)
+//        for (int j = 1; j )
+
     for (int i = 0; i < num_of_var; i++)
     {
         bool found = false;
@@ -632,20 +711,45 @@ void ReconPairs::filter_curves()
             int idx = (i * (2*num_of_var - 1 - i)) / 2 + j;
             double dists[4], angles[4];
 
-            dists[0] = (candidates[i].s_pt - candidates[j].s_pt).norm();
-            dists[1] = (candidates[i].s_pt - candidates[j].e_pt).norm();
-            dists[2] = (candidates[i].e_pt - candidates[j].s_pt).norm();
-            dists[3] = (candidates[i].e_pt - candidates[j].e_pt).norm();
+            dists[0] = (candidates[i].s_pt - candidates[j+i+1].s_pt).norm();
+            dists[1] = (candidates[i].s_pt - candidates[j+i+1].e_pt).norm();
+            dists[2] = (candidates[i].e_pt - candidates[j+i+1].s_pt).norm();
+            dists[3] = (candidates[i].e_pt - candidates[j+i+1].e_pt).norm();
 
-            angles[0] = candidates[i].s_dire.adjoint() * candidates[j].s_dire;
-            angles[1] = candidates[i].s_dire.adjoint() * candidates[j].e_dire;
-            angles[2] = candidates[i].e_dire.adjoint() * candidates[j].s_dire;
-            angles[3] = candidates[i].e_dire.adjoint() * candidates[j].e_dire;
+            angles[0] = candidates[i].s_dire.adjoint() * candidates[j+i+1].s_dire;
+            angles[1] = candidates[i].s_dire.adjoint() * candidates[j+i+1].e_dire;
+            angles[2] = candidates[i].e_dire.adjoint() * candidates[j+i+1].s_dire;
+            angles[3] = candidates[i].e_dire.adjoint() * candidates[j+i+1].e_dire;
 
             auto min_idx = min_element(dists, dists+4);
-            binary_cost[idx] = *min_idx + MU * (angles[min_idx-dists] + 1) / 2;
+            binary_cost[idx] = *min_idx + MU * (1 + angles[min_idx-dists]) / 2;
+#if DEBUG
+//            if (i == 8 and j == 3)
+//            {
+//                cout << i << " " << j << " " << min_idx-dists << endl;
+//                cout << candidates[i].s_dire << endl << candidates[j+i+1].s_dire << endl;
+//                cout << candidates[i].s_dire << endl << candidates[j+i+1].e_dire << endl;
+//                cout << candidates[i].e_dire << endl << candidates[j+i+1].s_dire << endl;
+//                cout << candidates[i].e_dire << endl << candidates[j+i+1].e_dire << endl;
+//                cout << endl;
+//            }
+
+            distance_cost[i][j+i+1] = *min_idx;
+            angle_cost[i][i+j+1] = MU * (1 + angles[min_idx-dists]) / 2;
+            total_cost[i][i+j+1] = binary_cost[idx];
+#endif
         }
     }
+
+#if DEBUG
+    cout << endl << "Binary cost" << endl;
+    cout << "distance cost" << endl;
+    help_print(distance_cost, num_of_var);
+    cout << "angle_cost" << endl;
+    help_print(angle_cost, num_of_var);
+    cout << "total cost" << endl;
+    help_print(total_cost, num_of_var);
+#endif
 
     GRBEnv env = GRBEnv();
     vector<GRBVar> var_list;    // To store all variables
@@ -692,10 +796,14 @@ void ReconPairs::filter_curves()
     // Optimize model
     MIPmodel.optimize();
 
+#if DEBUG
+
     for(int i = 0; i < num_of_var; i++)
     {
-        cout << "Result: " << var_list[i].get(GRB_DoubleAttr_X) << " Index: " << candidates[i].idx[0] << " " << candidates[i].idx[1] << endl;
+        cout << i << " Result: " << var_list[i].get(GRB_DoubleAttr_X) << " Index: " << candidates[i].idx[0] << " " << candidates[i].idx[1] << endl;
     }
+
+#endif
 
     //// Finally, use mTSP to solve the problem.
 
@@ -739,12 +847,63 @@ void ReconPairs::filter_curves()
             {
                 cost[i*(num_of_nodes) + j] = 0;
             }
+            else if (i < j)
+            {
+                cost[i*(num_of_nodes) + j] = binary_cost[(mapping[i-1] * (2*num_of_var - 1 - mapping[i-1])) / 2 + mapping[j-1]-mapping[i-1]-1];
+            }
             else
             {
-                cost[i*(num_of_nodes) + j] = binary_cost[(mapping[i-1] * (2*num_of_var - 1 - mapping[i-1])) / 2 + mapping[j-1]];
+                cost[i*(num_of_nodes) + j] = cost[j*(num_of_nodes) + i];
             }
         }
     }
+
+#if DEBUG
+    cout << "Desired matrix:" << endl;
+    cout << setw(8) << "\\\t\t";
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << setw(8) << i << "\t";
+    }
+    cout << endl;
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << setw(8) << i << "\t";
+        for (int j = 0; j < num_of_nodes; j++)
+        {
+            if (i == 0 or j == 0)
+            {
+                cout << setw(8) << 0 << "\t";
+            }
+            else
+            {
+                cout << setw(8) << total_cost[mapping[i-1]][mapping[j-1]] << "\t";
+            }
+        }
+        cout << endl;
+    }
+    cout << endl;
+
+    cout << "Result matrix:" << endl;
+    cout << setw(8) << "\\\t\t";
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << setw(8) << i << "\t";
+    }
+    cout << endl;
+    for (int i = 0; i < num_of_nodes; i++)
+    {
+        cout << setw(8) << i << "\t";
+        for (int j = 0; j < num_of_nodes; j++)
+        {
+            cout << setw(8) << cost[i*(num_of_nodes) + j] << "\t";
+        }
+        cout << endl;
+    }
+    cout << endl;
+
+#endif
+
     cost.emplace_back(*(max_element(cost.begin(), cost.end()))/5);     // Set Ita
     vars.insert(vars.begin(), variables.begin(), variables.begin()+num_of_edges);       // add x_ij
     vars.emplace_back(variables.back());        // add k
@@ -847,6 +1006,7 @@ void ReconPairs::filter_curves()
     int num_of_lines = static_cast<int>(round(variables.back().get(GRB_DoubleAttr_X)));
     wires.resize(num_of_lines);
 
+#if DEBUG
 
     cout << "\\ " ;
     for (int i = 0; i < num_of_nodes; i++)
@@ -874,6 +1034,8 @@ void ReconPairs::filter_curves()
 
     cout << "k ";
     cout << static_cast<int>(round(variables.back().get(GRB_DoubleAttr_X))) << " " << endl;
+
+#endif
 
     for (int i = 1; i < num_of_nodes; i++)
     {
