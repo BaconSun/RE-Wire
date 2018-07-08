@@ -47,10 +47,13 @@ class ReconPairs
 {
 public:
     static const int MINIMUM_CURVE_SIZE = 5;
-    static constexpr double UNARY_THRESHOLD = 100; // According to paper, 0.0015 - 0.008
+    static constexpr double UNARY_THRESHOLD = 0.5; // According to paper, 0.0015 - 0.008
     static constexpr double MU = 0.75;          // Acoording to paper, 1
-    static constexpr double ETA = 0.3;        // According to paper, 0.001-0.004
-    static constexpr double UNARY_SCALE = 4500; //  According to paper, 2.5 - 5. Compensation for the lambda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
+    static constexpr double ETA = 0.002;        // According to paper, 0.001-0.004
+    static constexpr double UNARY_SCALE = 10; //  According to paper, 2.5 - 5. Compensation for the lambda in the paper. Note that we only use half ot the XTVX, thus this value should be 1/(2*lambda)
+
+    static const int FILTER_SIZE = 9; // must be odd
+    static constexpr double SIGMA = 2;
 
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
     ReconPairs(std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>, std::shared_ptr<ProjectImage>);
@@ -64,10 +67,12 @@ public:
     std::vector<IndexMap> idx_array;                // the index array to map the idx from searching result to third_view->curve_segments
     int total_curve_num;
     std::vector<Curve> candidates;      // Candidates of possible 3D curves
+    std::vector<int> mapping;
 
     std::vector<std::vector<Curve>> wires;
 
     std::vector<std::vector<Eigen::Vector3d>> curve_segments[2];
+    std::vector<std::vector<Eigen::Vector3d>> computed_segments[2];
 
     std::vector<std::vector<RectifiedPoint>> rect_segments[2];
 
@@ -78,6 +83,8 @@ public:
                                         // of the point. W is 3d vector, w is the 4th value of 4d homogeneous coordinate.
     double scale;                       // the scale of the 3d coordinates
 
+    std::vector<std::vector<double>> filters;
+
     void find_pairs();                  // compute the candidates
     void compute_fundamental();
     void compute_3d();
@@ -86,6 +93,7 @@ public:
     void set_third_view(std::shared_ptr<ProjectImage>);
     void build_kd_tree();
     double find_nearest_point(const Eigen::Vector3d&, int&);
+    std::vector<Eigen::Vector3d> smooth(std::vector<Eigen::Vector3d>);         // smooth the curves;
 
 //    Eigen::Vector3d center[2];
 //    Eigen::Vector3d rectified_center[2];

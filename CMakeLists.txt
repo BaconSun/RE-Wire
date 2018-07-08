@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 
 if (GUROBI_INCLUDE_DIR)
  # in cache already
@@ -59,7 +60,7 @@ set(GUROBI_LIBRARIES "${GUROBI_LIBRARY};${GUROBI_CXX_LIBRARY}" )
 
 endif(GUROBI_INCLUDE_DIR)
 
-#message(${GUROBI_LIBRARIES})
+#message(${PCL_INCLUDE_DIRS})
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -167,6 +168,7 @@ include_directories(
  src
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+        ${PCL_INCLUDE_DIRS}
   exlibs/ANN/include
 )
 
@@ -176,6 +178,7 @@ link_directories(
   exlibs/ANN/lib
         /home/bacon/Others/gurobi800/linux64/lib/
 )
+#link_directories(${PCL_LIBRARY_DIRS})
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -214,7 +217,7 @@ target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES} ${OpenCV_LIBRARIES}
   ${CMAKE_CURRENT_SOURCE_DIR}/exlibs/ANN/lib/libANN.a
         ${GUROBI_LIBRARIES}
-
+        ${PCL_LIBRARIES}
 )
 
 

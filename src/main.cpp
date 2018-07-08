@@ -13,6 +13,13 @@
 #include "ProjectImage.h"
 #include "ReconPairs.h"
 
+//// TODO: add PCL viewer to see How 3D points are allocated.
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/visualization/cloud_viewer.h>
+
+using namespace pcl;
+
 using namespace std;
 using namespace cv;
 using namespace Eigen;
@@ -34,7 +41,7 @@ int main (int argc, char* argv[])
     cout << endl;
 //    waitKey(0);
 
-    shared_ptr<ReconPairs> recon = make_shared<ReconPairs>(camera[0], camera[3], camera[4]);
+    shared_ptr<ReconPairs> recon = make_shared<ReconPairs>(camera[0], camera[3], camera[2]);
 
 /*
 //    Vector4d center;
@@ -51,7 +58,7 @@ int main (int argc, char* argv[])
     recon->rectify();
     recon->find_pairs();
     recon->compute_3d();
-//    recon->filter_curves();
+    recon->filter_curves();
 
     /*
 //    imshow("ImageL Original", recon->view[1]->original_image);
@@ -238,69 +245,69 @@ int main (int argc, char* argv[])
 //        fout << endl;
 //    }
 
-    for (auto &w: recon->candidates)
-    {
-        for (int i = 0; i < 2; i++)
-        {
-            combine[i] = recon->view[i]->skeleton.clone();
-            cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
-            for (auto &p: w.curve)
-            {
+//    for (auto &w: recon->mapping)
+//    {
+//        for (int i = 0; i < 2; i++)
+//        {
+//            combine[i] = recon->view[i]->skeleton.clone();
+//            cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+//
+//            for (auto &p: recon->candidates[w].curve)
+//            {
+//                Vector3d temp = recon->view[i]->P * p;
+//                temp = temp / temp[2];
+//
+//                if (temp[0] >= 0 and temp[0] <= combine[i].size[1] and temp[1] >= 0 and temp[1] <= combine[i].size[0])
+//                {
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 225;
+//                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+//                }
+//                else
+//                {
+//                    cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
+//                }
+//            }
+//            cout << "Candidate: " << recon->candidates[w].idx[0] << " " << recon->candidates[w].idx[1] << " Score: " << recon->candidates[w].score << endl;
+//        }
+//        imshow("main", combine[0]);
+//        imshow("neigh", combine[1]);
+//        waitKey(0);
+//    }
 
-                Vector3d temp = recon->view[i]->P * p;
-                temp = temp / temp[2];
-                if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
-                {
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
-                    combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
-                }
-                else
-                {
-                    cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
-                }
-            }
-            cout << "Candidate: " << w.idx[0] << " " << w.idx[1] << " Score: " << w.score << endl;
-        }
-        imshow("main", combine[0]);
-        imshow("neigh", combine[1]);
-        waitKey(0);
-    }
 
-    /*
-    for (auto &w: recon->wires)
-    {
-        for (auto &j: w)
-        {
-
-            for (int i = 0; i < 2; i++)
-            {
-                combine[i] = recon->view[i]->skeleton.clone();
-                cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
-                for (auto &p: j.curve)
-                {
-
-                    Vector3d temp = recon->view[i]->P * p;
-                    temp = temp / temp[2];
-                    if (temp[0] >= 0 and temp[0] <= 640 and temp[1] >= 0 and temp[1] <= 480)
-                    {
-                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
-                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
-                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
-                    }
-                    else
-                    {
-                        cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
-                    }
-                }
-            }
-            cout << "wire: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
-            imshow("main", combine[0]);
-            imshow("neigh", combine[1]);
-            waitKey(0);
-        }
-    }
-     */
+//    for (auto &w: recon->wires)
+//    {
+//        for (auto &j: w)
+//        {
+//
+//            for (int i = 0; i < 2; i++)
+//            {
+//                combine[i] = recon->view[i]->skeleton.clone();
+//                cvtColor(combine[i], combine[i], cv::COLOR_GRAY2BGR);
+//                for (auto &p: j.curve)
+//                {
+//
+//                    Vector3d temp = recon->view[i]->P * p;
+//                    temp = temp / temp[2];
+//                    if (temp[0] >= 0 and temp[0] <= combine[i].size[1] and temp[1] >= 0 and temp[1] <= combine[i].size[0])
+//                    {
+//                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+//                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
+//                        combine[i].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+//                    }
+//                    else
+//                    {
+//                        cout << "Point not in image! Image: " << i << " Point: " << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << endl;
+//                    }
+//                }
+//            }
+//            cout << "wire: " << j.idx[0] << " " << j.idx[1] << " Score: " << j.score << endl;
+//            imshow("main", combine[0]);
+//            imshow("neigh", combine[1]);
+//            waitKey(0);
+//        }
+//    }
 
 
 /*
@@ -340,5 +347,60 @@ int main (int argc, char* argv[])
     // To release the memory used by ANN
     annClose();
 
+    visualization::CloudViewer viewer ("Simple Cloud Viewer");
+    PointCloud <PointXYZRGB>::Ptr cloud (new PointCloud <PointXYZRGB>);
+
+    int color_idx = 0;
+    vector<vector<int>> color_list;
+
+    ifstream color_reader;
+    color_reader.open(workspace+"color.txt");
+    if (color_reader.is_open())
+    {
+        int r,g,b;
+        while (color_reader >> r >> g >> b)
+        {
+            vector<int> temp;
+            temp.emplace_back(r);
+            temp.emplace_back(g);
+            temp.emplace_back(b);
+            color_list.emplace_back(move(temp));
+        }
+    }
+    else
+    {
+        cout << "Error! cannot find the color list file!" << endl;
+        return -1;
+    }
+    color_reader.close();
+
+    for (const auto &w: recon->wires)
+    {
+        for (const auto &c: w)
+        {
+            for (const auto &p: c.curve)
+            {
+                PointXYZRGB point_3d;
+                point_3d.x = p[0];
+                point_3d.y = p[1];
+                point_3d.z = p[2];
+                point_3d.r = color_list[color_idx][0];
+                point_3d.g = color_list[color_idx][1];
+                point_3d.b = color_list[color_idx][2];
+                cloud->push_back(point_3d);
+            }
+            color_idx ++;
+            if (color_idx >= color_list.size())
+            {
+                color_idx = 0;
+            }
+        }
+    }
+    cout << "visualize begin" << endl;
+    viewer.showCloud(cloud);
+    while (!viewer.wasStopped ())
+    {
+    }
+    cout << "visualize end" << endl;
     return 0;
 }

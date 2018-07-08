@@ -15,6 +15,7 @@
 
 #if DEBUG
 #include <iomanip>
+#include <opencv2/highgui/highgui.hpp>
 #endif
 
 using namespace Eigen;
@@ -111,6 +112,48 @@ ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv)
             }
         }
     }
+
+    int w = (FILTER_SIZE - 1 ) / 2;
+    filters.resize(FILTER_SIZE);
+    for (int i = 0; i < FILTER_SIZE; i++)
+    {
+        filters[i].resize(FILTER_SIZE - (i>w ? i-w : w-i));
+    }
+    for (int i = 0; i < FILTER_SIZE; i++)
+    {
+        filters[w][i] = exp(-(i-w)*(i-w) / (2*SIGMA*SIGMA));
+    }
+    for (int i = 0; i < FILTER_SIZE; i++)
+    {
+        if (i < w)
+        {
+            for (int j = 0; j < FILTER_SIZE - w + i; j++)
+            {
+                filters[i][j] = filters[w][w-i+j];
+            }
+        }
+        else if (i > w)
+        {
+            for (int j = 0; j < FILTER_SIZE - i + w; j++)
+            {
+                filters[i][j] = filters[w][j];
+            }
+        }
+    }
+    for (int i = 0; i < FILTER_SIZE; i++)
+    {
+        double sum = 0;
+        for (int j = 0; j < filters[i].size(); j++)
+        {
+            sum += filters[i][j];
+        }
+        for (int j = 0; j < filters[i].size(); j++)
+        {
+            filters[i][j] /= sum;
+        }
+    }
+
+
 }
 
 ReconPairs::ReconPairs(shared_ptr<ProjectImage> mv, shared_ptr<ProjectImage> nv, shared_ptr<ProjectImage> tv): ReconPairs(move(mv), move(nv))
@@ -173,23 +216,35 @@ void ReconPairs::rectify() {
         cv2eigen(P_after[idx], P_after_M[idx]);
         P_after_M[idx] = P_after_M[idx].block(0, 0, 3, 3);
 
-        rect_segments[idx].resize(curve_segments[idx].size());
-        for (int i = 0; i < curve_segments[idx].size(); i++) {
-            for (int j = 0; j < curve_segments[idx][i].size(); j++) {
+        computed_segments[idx].resize(curve_segments[idx].size());
+        for (int i = 0; i < curve_segments[idx].size(); i++)
+        {
+            computed_segments[idx][i].resize(curve_segments[idx][i].size());
+            for (int j = 0; j < curve_segments[idx][i].size(); j++)
+            {
                 Vector3d temp_v = P_after_M[idx] * R_after_M[idx] * view[idx]->K_i * curve_segments[idx][i][j];
                 temp_v = temp_v / temp_v[2];
-                RectifiedPoint temp_p(temp_v);
+                computed_segments[idx][i][j] = temp_v;
+            }
+            computed_segments[idx][i] = smooth(computed_segments[idx][i]);
+        }
+
+        rect_segments[idx].resize(computed_segments[idx].size());
+        for (int i = 0; i < computed_segments[idx].size(); i++) {
+            for (int j = 0; j < computed_segments[idx][i].size(); j++) {
+                RectifiedPoint temp_p(computed_segments[idx][i][j]);
                 temp_p.idx = i;
                 view[idx]->computed_image.at<uchar>(static_cast<int>(round(temp_p.anchor[1])), static_cast<int>(round(temp_p.anchor[0]))) = 255;
                 auto p = find(rect_segments[idx][i].begin(), rect_segments[idx][i].end(), temp_p);
                 if (p != rect_segments[idx][i].end()) {
-                    p->add(temp_v);
+                    p->add(computed_segments[idx][i][j]);
                 } else {
-                    temp_p.add(temp_v);
+                    temp_p.add(computed_segments[idx][i][j]);
                     rect_segments[idx][i].emplace_back(move(temp_p));
                 }
             }
         }
+
 //        rectified_center[idx] = P_after_M[idx] * R_after_M[idx] * view[idx]->K_i * center[idx];
 //        rectified_center[idx] /= rectified_center[idx](2);
     }
@@ -408,16 +463,42 @@ void ReconPairs::compute_3d()
         {
             int main_step = c.segment[0][i].xmax - c.segment[0][i].xmin;
             int neigh_step = c.segment[1][i].xmax - c.segment[1][i].xmin;
-            if (main_step == 0)
+            double y_step;
+            if (i == 0)
             {
-                c.curve.emplace_back(c.sparse_curve[i]);
+                y_step = c.segment[0][i].y < c.segment[0][i+1].y ? 1.0 : -1.0;
             }
             else
             {
+                y_step = c.segment[0][i-1].y < c.segment[0][i].y ? 1.0 : -1.0;
+            }
+            if (main_step == 0 and neigh_step == 0)
+            {
+                c.curve.emplace_back(c.sparse_curve[i]);
+            }
+            else if (main_step > neigh_step)
+            {
                 for (int x = 0; x <= main_step; x++)
                 {
-                    Vector3d main_point(c.segment[0][i].xmin + x, c.segment[0][i].y, 1.0);
-                    Vector3d neigh_point(c.segment[1][i].xmin + neigh_step * 1.0 / main_step * x, c.segment[0][i].y, 1.0);
+                    double ratio = neigh_step * 1.0 / main_step * x;
+                    Vector3d main_point(c.segment[0][i].xmin + x, c.segment[0][i].y + (ratio - 0.5) * y_step, 1.0);
+                    Vector3d neigh_point(c.segment[1][i].xmin + ratio, c.segment[0][i].y + (ratio - 0.5) * y_step, 1.0);
+                    w = (main_point[0] - neigh_point[0]) * scale;
+                    VectorXd temp_point;
+                    temp_point = KR_inv * (neigh_point - w * KT);
+                    temp_point.conservativeResize(4);
+                    temp_point(3) = w;
+                    temp_point /= temp_point(3);
+                    c.curve.emplace_back(move(temp_point.head(4)));
+                }
+            }
+            else
+            {
+                for (int x = 0; x <= neigh_step; x++)
+                {
+                    double ratio = main_step * 1.0 / neigh_step * x;
+                    Vector3d main_point(c.segment[0][i].xmin + ratio, c.segment[0][i].y + (ratio - 0.5) * y_step, 1.0);
+                    Vector3d neigh_point(c.segment[1][i].xmin + x, c.segment[0][i].y + (ratio - 0.5) * y_step, 1.0);
                     w = (main_point[0] - neigh_point[0]) * scale;
                     VectorXd temp_point;
                     temp_point = KR_inv * (neigh_point - w * KT);
@@ -568,6 +649,16 @@ void ReconPairs::filter_curves()
         double distances = 0;
         double angle = 0;
         int idx;
+
+#if DEBUG
+//        Mat combine[3];
+//        combine[0] = view[0]->skeleton.clone();
+//        combine[1] = view[1]->skeleton.clone();
+//        combine[2] = third_view->skeleton.clone();
+//        for (int k = 0; k < 3; k++)
+//            cvtColor(combine[k], combine[k], cv::COLOR_GRAY2BGR);
+#endif
+
         for (int j = 0; j < projected_points[i].size(); j++)
         {
             distances += find_nearest_point(projected_points[i][j], idx) / diag;
@@ -593,6 +684,36 @@ void ReconPairs::filter_curves()
             direction[2] = 0;
             direction = direction.normalized();
             angle += ETA * (1 - fabs(direction.dot(projected_directions[i][j])));
+
+#if DEBUG
+//            Vector3d temp;
+//            temp = view[0]->P * candidates[i].curve[j];
+//            temp /= temp[2];
+//            combine[0].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+//            combine[0].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
+//            combine[0].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+//
+//            temp = view[1]->P * candidates[i].curve[j];
+//            temp /= temp[2];
+//            combine[1].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[0] = 255;
+//            combine[1].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[1] = 255;
+//            combine[1].at<Vec3b>(Point(int(temp[0]), int(temp[1])))[2] = 0;
+//
+//            Point p0 = third_view->curve_segments[idx_array[idx].s][idx_array[idx].p];
+//            combine[2].at<Vec3b>(Point(p0.x, p0.y))[0] = 255;
+//            combine[2].at<Vec3b>(Point(p0.x, p0.y))[1] = 255;
+//            combine[2].at<Vec3b>(Point(p0.x, p0.y))[2] = 0;
+//
+//            if (projected_points[i][j][0] >= 0 and projected_points[i][j][0] <= combine[2].size[1]
+//                and projected_points[i][j][1] >= 0 and projected_points[i][j][1] <= combine[2].size[0])
+//            {
+//                combine[2].at<Vec3b>(Point(int(projected_points[i][j][0]), int(projected_points[i][j][1])))[0] = 255;
+//                combine[2].at<Vec3b>(Point(int(projected_points[i][j][0]), int(projected_points[i][j][1])))[1] = 0;
+//                combine[2].at<Vec3b>(Point(int(projected_points[i][j][0]), int(projected_points[i][j][1])))[2] = 255;
+//            }
+
+#endif
+
         }
         candidates[i].score = (distances + angle) / candidates[i].curve.size();
 #if DEBUG
@@ -602,10 +723,14 @@ void ReconPairs::filter_curves()
         }
         else
         {
-            cout << i-remove_counter << " total cost with scale:" << candidates[i].score * UNARY_SCALE
+            cout << i-remove_counter << " " << candidates[i].idx[0] << " " << candidates[i].idx[1] << " total cost with scale:" << candidates[i].score * UNARY_SCALE
                  << " distance cost: " << distances << " angle cost: " << angle << endl;
         }
 
+//        imshow("main", combine[0]);
+//        imshow("neigh", combine[1]);
+//        imshow("third", combine[2]);
+//        waitKey(0);
 #endif
     }
 
@@ -633,8 +758,8 @@ void ReconPairs::filter_curves()
     {
         c.s_pt = c.curve.front();
         c.e_pt = c.curve.back();
-        c.s_dire = (*(c.curve.begin()+1) * 4 / 3 - *(c.curve.begin()+2) / 3 - c.s_pt).normalized();
-        c.e_dire = (*(c.curve.end() - 2) * 4 / 3 - *(c.curve.end() - 3) / 3 - c.e_pt).normalized();
+        c.s_dire = 4 * (*(c.curve.begin()+1) / 3 - *(c.curve.begin()+2) / 3 - c.s_pt).normalized();
+        c.e_dire = 4 * (*(c.curve.end() - 2) / 3 - *(c.curve.end() - 3) / 3 - c.e_pt).normalized();
     }
 
     //// Afterwards, compute the binary pairwise cost for each possible pairs and find the unique set with optimization
@@ -807,7 +932,7 @@ void ReconPairs::filter_curves()
 
     //// Finally, use mTSP to solve the problem.
 
-    vector<int> mapping;    // Index mapping between selected candidates and var_list[]
+    // Index mapping between selected candidates and var_list[]
     for (int i = 0; i < num_of_var; i++)
     {
         if (var_list[i].get(GRB_DoubleAttr_X) > 0.5)
@@ -1066,4 +1191,39 @@ void ReconPairs::filter_curves()
             wires.emplace_back(move(temp));
         }
     }
+}
+
+vector<Vector3d> ReconPairs::smooth(vector<Vector3d> t)
+{
+    if (t.size() < FILTER_SIZE)
+    {
+        return t;
+    }
+    vector<Vector3d> return_t;
+    return_t.resize(t.size());
+    fill(return_t.begin(), return_t.end(), Vector3d(0,0,0));
+    int w = (FILTER_SIZE - 1) / 2;
+    int size = t.size();
+    for (int i = 0; i < w; i++)
+    {
+        for (int j = 0; j < filters[i].size(); j++)
+        {
+            return_t[i] += filters[i][j] * t[j];
+        }
+    }
+    for (int i = 0; i < size - FILTER_SIZE + 1; i++)
+    {
+        for (int j = 0; j < FILTER_SIZE; j++)
+        {
+            return_t[i+w] += filters[w][j] * t[i+j];
+        }
+    }
+    for (int i = 0; i < w; i++)
+    {
+        for (int j = 0; j < filters[w + i + 1].size(); j++)
+        {
+            return_t[size-w+i] += filters[w+i+1][j] * t[size - FILTER_SIZE + 1 + i + j];
+        }
+    }
+    return return_t;
 }
